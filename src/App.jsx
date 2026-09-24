@@ -14,6 +14,7 @@ import Analytics from './components/Analytics';
 import SiteSchemas from './components/SiteSchemas';
 import { buildSiteContent, defaultSiteContent } from './lib/siteContent';
 import { siteConfig } from './config/siteConfig';
+import { featureConfig } from './config/featureConfig';
 
 import {
   initialPayment,
@@ -467,7 +468,16 @@ function StoreApp() {
               path="/products/:productId"
               element={<ProductPage addToCart={addToCart} products={products} />}
             />
-            <Route path="/verify/unit/:unitId" element={<VerifyProductPage products={products} />} />
+            <Route
+              path="/verify/unit/:unitId"
+              element={
+                featureConfig.productVerification ? (
+                  <VerifyProductPage products={products} />
+                ) : (
+                  <Navigate to="/" replace />
+                )
+              }
+            />
             <Route
               path="/cart"
               element={
@@ -527,8 +537,26 @@ function StoreApp() {
             <Route path="/auth" element={<AuthPage user={user} />} />
             <Route path="/track" element={<TrackingPage />} />
             <Route path="/policies" element={<PoliciesPage siteContent={siteContent} />} />
-            <Route path="/guides/wall-clock-placement" element={<PlacementGuidePage />} />
-            <Route path="/locations/:city" element={<LocationPage products={products} />} />
+            <Route
+              path="/guides/wall-clock-placement"
+              element={
+                featureConfig.placementGuide ? (
+                  <PlacementGuidePage />
+                ) : (
+                  <Navigate to="/" replace />
+                )
+              }
+            />
+            <Route
+              path="/locations/:city"
+              element={
+                featureConfig.locationPages ? (
+                  <LocationPage products={products} />
+                ) : (
+                  <Navigate to="/" replace />
+                )
+              }
+            />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Suspense>
