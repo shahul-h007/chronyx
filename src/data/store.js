@@ -1,4 +1,6 @@
-export const CART_KEY = 'chronyx-cart';
+import { siteConfig } from '../config/siteConfig';
+
+export const CART_KEY = siteConfig.storage.cartKey;
 export const ORDER_KEY = 'chronyx-orders';
 
 export const homeHighlights = [

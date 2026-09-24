@@ -13,9 +13,9 @@ import BackToTop from './components/BackToTop';
 import Analytics from './components/Analytics';
 import SiteSchemas from './components/SiteSchemas';
 import { buildSiteContent, defaultSiteContent } from './lib/siteContent';
+import { siteConfig } from './config/siteConfig';
 
 import {
-  CART_KEY,
   initialPayment,
   initialShipping,
   loadCart,
@@ -53,14 +53,13 @@ function App() {
   );
 }
 
-const WISHLIST_KEY = 'chronyx-wishlist';
 const DEFAULT_STORE_SETTINGS = {
   maintenance_mode: false,
   cod_enabled: true,
   cod_fee: 100,
   free_shipping_threshold: 50000,
-  store_name: 'CHRONYX',
-  contact_email: 'hello@chronyx.in',
+  store_name: siteConfig.name,
+  contact_email: siteConfig.contactEmail,
   whatsapp_number: '',
   express_shipping_enabled: false,
   express_shipping_fee: 1500,
@@ -80,7 +79,7 @@ function StoreApp() {
   
   const [wishlist, setWishlist] = useState(() => {
     try {
-      return JSON.parse(window.localStorage.getItem(WISHLIST_KEY) || '[]');
+      return JSON.parse(window.localStorage.getItem(siteConfig.storage.wishlistKey) || '[]');
     } catch {
       return [];
     }
@@ -234,13 +233,13 @@ function StoreApp() {
 
   useEffect(() => {
     try {
-      window.localStorage.setItem(CART_KEY, JSON.stringify(cart));
+      window.localStorage.setItem(siteConfig.storage.cartKey, JSON.stringify(cart));
     } catch {}
   }, [cart]);
 
   useEffect(() => {
     try {
-      window.localStorage.setItem(WISHLIST_KEY, JSON.stringify(wishlist));
+      window.localStorage.setItem(siteConfig.storage.wishlistKey, JSON.stringify(wishlist));
     } catch {}
   }, [wishlist]);
 
@@ -408,7 +407,7 @@ function StoreApp() {
     }).format(date);
   }, []);
 
-  const publicStoreName = String(storeSettings.store_name || DEFAULT_STORE_SETTINGS.store_name).trim() || 'CHRONYX';
+  const publicStoreName = String(storeSettings.store_name || DEFAULT_STORE_SETTINGS.store_name).trim() || siteConfig.name;
   const whatsappNumber = String(storeSettings.whatsapp_number || '')
     .replace(/\D/g, '')
     .replace(/^0+/, '');
@@ -418,7 +417,7 @@ function StoreApp() {
       <Analytics />
       <SiteSchemas />
       <div className={splashDone ? 'splash-screen is-hidden' : 'splash-screen'}>
-        <span>CHRONYX</span>
+        <span>{siteConfig.name}</span>
       </div>
 
       <SiteHeader
