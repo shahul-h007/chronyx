@@ -13,7 +13,8 @@ const Login = () => {
     setLoading(true);
     setErrorMsg('');
 
-    if (email.toLowerCase() !== 'chronyxbrand@gmail.com') {
+    const adminEmail = import.meta.env.VITE_ADMIN_EMAIL;
+    if (!adminEmail || email.toLowerCase() !== adminEmail.toLowerCase()) {
       setErrorMsg('Unauthorized: This portal is restricted to the store owner.');
       setLoading(false);
       return;

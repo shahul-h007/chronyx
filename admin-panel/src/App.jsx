@@ -20,7 +20,7 @@ function App() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const adminEmail = import.meta.env.VITE_ADMIN_EMAIL || 'chronyxbrand@gmail.com';
+  const adminEmail = import.meta.env.VITE_ADMIN_EMAIL;
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
