@@ -30,6 +30,7 @@ create table "public"."products" (
     "video_transcript" text,
     "video_srt_url" text,
     "created_at" timestamp with time zone not null default now(),
+    "attributes" jsonb DEFAULT '{}'::jsonb,
     primary key ("id")
 );
 
