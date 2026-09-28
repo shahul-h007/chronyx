@@ -141,5 +141,5 @@ for (const finding of findings) {
   console.error(`[${finding.severity.toUpperCase()}] ${finding.id}: ${finding.message}`);
   console.error(`  Files: ${finding.paths.join(', ')}`);
 }
-console.error('\nSee security_best_practices_report.md for impact and recommended fixes.');
+console.error('\nSee docs/security/security_best_practices_report.md for impact and recommended fixes.');
 process.exit(1);
