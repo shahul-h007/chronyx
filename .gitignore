@@ -4,3 +4,6 @@ test-results
 playwright-report
 .env
 .env.*
+admin-panel/dist/
+admin-panel/node_modules/
+supabase/.temp/
