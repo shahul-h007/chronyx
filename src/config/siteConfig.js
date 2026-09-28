@@ -4,9 +4,9 @@ export const siteConfig = {
     ? import.meta.env.VITE_SITE_URL
     : 'https://chronyx.in',
   branding: {
-    logo: '/brand/chronyx-logo-full.png',
-    mark: '/brand/chronyx-mark-gold.png',
-    favicon: '/brand/favicon-512.png',
+    logo: '/brand/logo-full.png',
+    mark: '/brand/mark.png',
+    favicon: '/brand/favicon.png',
     appleTouchIcon: '/brand/apple-touch-icon.png',
   },
   contact: {
