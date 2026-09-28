@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { siteConfig } from '../config/siteConfig';
 
 let cachedOverrides = null;
 
-const DEFAULT_TITLE = 'CHRONYX | Luxury Wooden Wall Clocks';
+const DEFAULT_TITLE = `${siteConfig.name} | Luxury Wooden Wall Clocks`;
 const DEFAULT_DESCRIPTION =
   'Precision-crafted wooden wall clocks blending modern minimalist design with timeless materials.';
 const DEFAULT_IMAGE =
   'https://images.unsplash.com/photo-1563861826100-9cb868fdbe1c?auto=format&fit=crop&q=80&w=1200&h=630';
-const SITE_URL = import.meta.env.VITE_SITE_URL || 'https://chronyx.in';
+const SITE_URL = import.meta.env.VITE_SITE_URL || siteConfig.domain;
 
 const upsertMeta = (selector, attributes) => {
   let element = document.head.querySelector(selector);
@@ -56,7 +57,7 @@ export default function SEO({ title, description, schema, image, path, noindex }
   }, [cleanPath]);
 
   useEffect(() => {
-    const pageTitle = dbOverride?.title || (title ? `${title} | CHRONYX` : DEFAULT_TITLE);
+    const pageTitle = dbOverride?.title || (title ? `${title} | ${siteConfig.name}` : DEFAULT_TITLE);
     const pageDescription = dbOverride?.description || description || DEFAULT_DESCRIPTION;
     const pageImage = dbOverride?.image || image || DEFAULT_IMAGE;
     

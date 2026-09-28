@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { List, ShoppingBagOpen, X } from '@phosphor-icons/react';
 import { Link, useLocation } from 'react-router-dom';
+import { siteConfig } from '../config/siteConfig';
 
 const baseNavigationLinks = [
   { label: 'Shop', path: '/shop' },
@@ -8,7 +9,7 @@ const baseNavigationLinks = [
   { label: 'Contact', path: '/contact' },
 ];
 
-function SiteHeader({ cartCount, notice, setNotice, storeName = 'CHRONYX', user = null, showJournal = false }) {
+function SiteHeader({ cartCount, notice, setNotice, storeName = siteConfig.name, user = null, showJournal = false }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const location = useLocation();
@@ -39,7 +40,7 @@ function SiteHeader({ cartCount, notice, setNotice, storeName = 'CHRONYX', user 
           <Link className="brand-wordmark" to="/" aria-label={`${storeName} Home`}>
             <img
               className="brand-mark"
-              src="/brand/chronyx-mark-gold.png"
+              src={siteConfig.branding.mark}
               alt=""
               width="40"
               height="40"

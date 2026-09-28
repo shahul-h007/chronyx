@@ -1,7 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { siteConfig } from '../config/siteConfig';
 
-function SiteFooter({ storeName = 'CHRONYX', showJournal = false }) {
+function SiteFooter({ storeName = siteConfig.name, showJournal = false }) {
   return (
     <footer className="site-footer site-footer-v2">
       <div className="site-footer-shell">
@@ -9,7 +10,7 @@ function SiteFooter({ storeName = 'CHRONYX', showJournal = false }) {
           <Link to="/" className="brand-wordmark" aria-label={`${storeName} Home`}>
             <img
               className="brand-mark"
-              src="/brand/chronyx-mark-gold.png"
+              src={siteConfig.branding.mark}
               alt=""
               width="40"
               height="40"

@@ -1,7 +1,9 @@
+import { siteConfig } from '../config/siteConfig';
+
 const ENV = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env : {};
 
-export const SITE_URL = ENV.VITE_SITE_URL || 'https://chronyx.in';
-export const SITE_NAME = 'CHRONYX';
+export const SITE_URL = ENV.VITE_SITE_URL || siteConfig.domain;
+export const SITE_NAME = siteConfig.name;
 export const DEFAULT_SOCIAL_IMAGE =
   'https://images.unsplash.com/photo-1563861826100-9cb868fdbe1c?auto=format&fit=crop&q=80&w=1200&h=630';
 
@@ -206,11 +208,11 @@ export function buildOrganizationSchema() {
     '@type': 'Organization',
     name: SITE_NAME,
     url: SITE_URL,
-    logo: buildAbsoluteUrl('/brand/chronyx-logo-full.png'),
+    logo: buildAbsoluteUrl(siteConfig.branding.logo),
     contactPoint: {
       '@type': 'ContactPoint',
       contactType: 'customer support',
-      email: 'support@chronyx.in',
+      email: siteConfig.contact?.supportEmail || siteConfig.contactEmail,
       areaServed: 'IN',
       availableLanguage: ['en', 'hi'],
     },
@@ -274,7 +276,7 @@ ${urls}
 }
 export function buildArticleSchema(article) {
   if (!article) return null;
-  const siteUrl = import.meta.env.VITE_SITE_URL || 'https://chronyx.in';
+  const siteUrl = SITE_URL;
   return {
     '@context': 'https://schema.org',
     '@type': 'Article',
@@ -285,15 +287,15 @@ export function buildArticleSchema(article) {
     dateModified: article.updated_at ? new Date(article.updated_at).toISOString() : new Date().toISOString(),
     author: [{
       '@type': 'Organization',
-      name: 'CHRONYX',
+      name: SITE_NAME,
       url: siteUrl
     }],
     publisher: {
       '@type': 'Organization',
-      name: 'CHRONYX',
+      name: SITE_NAME,
       logo: {
         '@type': 'ImageObject',
-        url: `${siteUrl}/brand/chronyx-logo-full.png`
+        url: buildAbsoluteUrl(siteConfig.branding.logo)
       }
     },
     mainEntityOfPage: {
