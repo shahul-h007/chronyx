@@ -1,3 +1,5 @@
+import { adminConfig } from '../config/adminConfig';
+
 function sanitizeSeed(value) {
   return String(value || '')
     .toUpperCase()
@@ -44,7 +46,9 @@ export function buildUnitVerificationPath(unit) {
 }
 
 export function buildUnitVerificationUrl(unit, origin) {
-  const fallbackOrigin = import.meta.env.VITE_SITE_URL || 'https://chronyx.in';
+  const fallbackOrigin = typeof import.meta !== 'undefined' && import.meta.env?.VITE_STOREFRONT_URL
+    ? import.meta.env.VITE_STOREFRONT_URL
+    : (adminConfig?.storefrontUrl || 'https://example.com');
   return `${origin || fallbackOrigin}${buildUnitVerificationPath(unit)}`;
 }
 

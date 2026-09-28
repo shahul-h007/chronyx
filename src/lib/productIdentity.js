@@ -1,3 +1,5 @@
+import { siteConfig } from '../config/siteConfig';
+
 function sanitizeSeed(value) {
   return String(value || '')
     .toUpperCase()
@@ -44,7 +46,9 @@ export function buildUnitVerificationPath(unit) {
 }
 
 export function buildUnitVerificationUrl(unit, origin) {
-  const fallbackOrigin = import.meta.env.VITE_SITE_URL || 'https://chronyx.in';
+  const fallbackOrigin = typeof import.meta !== 'undefined' && import.meta.env?.VITE_SITE_URL
+    ? import.meta.env.VITE_SITE_URL
+    : (siteConfig?.domain || 'https://example.com');
   return `${origin || fallbackOrigin}${buildUnitVerificationPath(unit)}`;
 }
 
