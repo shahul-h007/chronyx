@@ -42,17 +42,17 @@ if (
   );
 }
 
-const rls = read('rls_policies.sql');
+const rls = read('supabase/migrations/011_hardened_rls.sql');
 if (/TO authenticated[\s\S]{0,120}USING \(true\)/.test(rls)) {
   fail(
     'SEC-002',
     'high',
     'RLS policies grant broad admin-like access to any authenticated user.',
-    ['rls_policies.sql'],
+    ['supabase/migrations/011_hardened_rls.sql'],
   );
 }
 
-const authenticity = read('authenticity_units_schema.sql');
+const authenticity = read('supabase/migrations/005_authenticity_units.sql');
 if (
   /Public can read product authenticity units/.test(authenticity) &&
   /for select[\s\S]{0,80}using \(true\)/i.test(authenticity) &&
@@ -62,7 +62,7 @@ if (
     'SEC-003',
     'high',
     'Public authenticity-unit reads can expose secret verification codes.',
-    ['authenticity_units_schema.sql'],
+    ['supabase/migrations/005_authenticity_units.sql'],
   );
 }
 
