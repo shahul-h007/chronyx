@@ -1,5 +1,6 @@
 import React from 'react';
 import SEO from '../components/SEO';
+import { siteConfig } from '../config/siteConfig';
 
 function PoliciesPage({ siteContent }) {
   const policyContent = siteContent?.policyContent;
@@ -24,7 +25,7 @@ function PoliciesPage({ siteContent }) {
     <div className="page-stack">
       <SEO
         title="Store Policies"
-        description="Refund, return, shipping, and privacy policies for CHRONYX."
+        description={`Refund, return, shipping, and privacy policies for ${siteConfig.name}.`}
       />
       <section className="page-header-panel">
         <p className="label">Legal</p>

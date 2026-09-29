@@ -2,7 +2,19 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { siteConfig } from '../config/siteConfig';
 
-function SiteFooter({ storeName = siteConfig.name, showJournal = false }) {
+function SiteFooter({
+  storeName = siteConfig.name,
+  showJournal = false,
+  footerContent = {},
+}) {
+  const exploreLinks = (footerContent?.exploreLinks || []).filter(
+    (link) => link?.visible !== false && link?.label && link?.path && (link.path !== '/blog' || showJournal)
+  );
+  const supportLinks = (footerContent?.supportLinks || []).filter(
+    (link) => link?.visible !== false && link?.label && link?.path
+  );
+  const instagramUrl = siteConfig.social?.instagram;
+
   return (
     <footer className="site-footer site-footer-v2">
       <div className="site-footer-shell">
@@ -21,12 +33,21 @@ function SiteFooter({ storeName = siteConfig.name, showJournal = false }) {
         </div>
 
         <div className="site-footer-links">
-          <Link to="/about">About</Link>
-          <Link to="/contact">Contact</Link>
-          {showJournal && <Link to="/blog">Journal</Link>}
-          <a href="https://instagram.com/chronyx.studio" target="_blank" rel="noreferrer">
-            Instagram
-          </a>
+          {exploreLinks.map((link) => (
+            <Link key={link.path} to={link.path}>
+              {link.label}
+            </Link>
+          ))}
+          {supportLinks.map((link) => (
+            <Link key={link.path} to={link.path}>
+              {link.label}
+            </Link>
+          ))}
+          {instagramUrl ? (
+            <a href={instagramUrl} target="_blank" rel="noreferrer">
+              Instagram
+            </a>
+          ) : null}
         </div>
 
         <div className="site-footer-meta">

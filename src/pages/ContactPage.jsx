@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import SEO from '../components/SEO';
+import { siteConfig } from '../config/siteConfig';
 
 function ContactPage({ siteContent, storeSettings }) {
   const [submitted, setSubmitted] = useState(false);
@@ -10,7 +11,7 @@ function ContactPage({ siteContent, storeSettings }) {
   const contactPageContent = siteContent?.contactPageContent;
   const addressLines = (contactPageContent.studioAddress || '').split('\n').filter(Boolean);
   const resolvedSupportEmail =
-    storeSettings?.contact_email || contactPageContent.supportEmail || 'hello@chronyx.in';
+    storeSettings?.contact_email || contactPageContent.supportEmail || siteConfig.contactEmail || 'hello@chronyx.in';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -38,7 +39,7 @@ function ContactPage({ siteContent, storeSettings }) {
     <div className="page-stack">
       <SEO
         title="Contact"
-        description="Contact CHRONYX for product questions, order help, or custom wooden clock requests."
+        description={`Contact ${siteConfig.name} for product questions, order help, or custom requests.`}
         path="/contact"
       />
       <section className="page-header-panel">

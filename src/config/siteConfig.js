@@ -14,6 +14,9 @@ export const siteConfig = {
     supportEmail: 'support@chronyx.in',
   },
   contactEmail: 'hello@chronyx.in',
+  social: {
+    instagram: '',
+  },
   storage: {
     wishlistKey: 'chronyx-wishlist',
     cartKey: 'chronyx-cart',

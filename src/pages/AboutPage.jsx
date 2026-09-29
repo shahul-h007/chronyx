@@ -1,5 +1,6 @@
 import React from 'react';
 import SEO from '../components/SEO';
+import { siteConfig } from '../config/siteConfig';
 
 function AboutPage({ siteContent }) {
   const aboutPageContent = siteContent?.aboutPageContent;
@@ -8,7 +9,7 @@ function AboutPage({ siteContent }) {
     <div className="page-stack">
       <SEO 
         title="The Atelier" 
-        description="Learn about the master artisans behind CHRONYX." 
+        description={`Learn about the master artisans behind ${siteConfig.name}.`} 
       />
       <section className="page-header-panel">
         <p className="label">{aboutPageContent.eyebrow}</p>
