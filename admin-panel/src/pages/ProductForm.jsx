@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowSquareOut, CaretLeft, DownloadSimple, Eye, FloppyDisk, Package, Palette, PlusCircle, Sparkle } from '@phosphor-icons/react';
+import { ArrowSquareOut, CaretLeft, DownloadSimple, Eye, FloppyDisk, Package, Palette, Plus, PlusCircle, Sparkle, Trash } from '@phosphor-icons/react';
 import { supabase } from '../lib/supabase';
 import ImageUpload from '../components/ImageUpload';
 import {
@@ -21,10 +21,7 @@ const defaultFormData = {
   is_limited_drop: false,
   drop_date: '',
   tagline: '',
-  size: '',
-  finish: '',
-  material: '',
-  movement_type: '',
+  attributes: [],
   summary: '',
   story: '',
   care_instructions: '',
@@ -101,6 +98,24 @@ const ProductForm = () => {
 
       if (imagesError) throw imagesError;
 
+      let initialAttributes = [];
+      if (product.attributes && typeof product.attributes === 'object' && Object.keys(product.attributes).length > 0) {
+        initialAttributes = Object.entries(product.attributes).map(([key, value]) => ({
+          key,
+          value: value != null ? String(value) : '',
+        }));
+      } else {
+        const legacy = [
+          { key: 'Size', value: product.size },
+          { key: 'Finish', value: product.finish },
+          { key: 'Material', value: product.material },
+          { key: 'Movement Type', value: product.movement_type },
+        ].filter((item) => item.value);
+        if (legacy.length > 0) {
+          initialAttributes = legacy;
+        }
+      }
+
       setFormData({
         name: product.name,
         description: product.description || '',
@@ -112,10 +127,7 @@ const ProductForm = () => {
         is_limited_drop: product.is_limited_drop,
         drop_date: product.drop_date ? new Date(product.drop_date).toISOString().slice(0, 16) : '',
         tagline: product.tagline || '',
-        size: product.size || '',
-        finish: product.finish || '',
-        material: product.material || '',
-        movement_type: product.movement_type || '',
+        attributes: initialAttributes,
         summary: product.summary || '',
         story: product.story || product.description || '',
         care_instructions: product.care_instructions ? product.care_instructions.join('\n') : '',
@@ -232,11 +244,41 @@ const ProductForm = () => {
     }));
   };
 
+  const handleAddAttribute = () => {
+    setFormData((current) => ({
+      ...current,
+      attributes: [...(current.attributes || []), { key: '', value: '' }],
+    }));
+  };
+
+  const handleAttributeChange = (index, field, value) => {
+    setFormData((current) => {
+      const next = [...(current.attributes || [])];
+      next[index] = { ...next[index], [field]: value };
+      return { ...current, attributes: next };
+    });
+  };
+
+  const handleRemoveAttribute = (index) => {
+    setFormData((current) => ({
+      ...current,
+      attributes: (current.attributes || []).filter((_, i) => i !== index),
+    }));
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     setSaving(true);
 
     try {
+      const attributesObject = (formData.attributes || []).reduce((acc, { key, value }) => {
+        const trimmedKey = String(key || '').trim();
+        if (trimmedKey) {
+          acc[trimmedKey] = String(value || '').trim();
+        }
+        return acc;
+      }, {});
+
       const productPayload = {
         name: formData.name,
         description: formData.description || formData.story,
@@ -248,10 +290,7 @@ const ProductForm = () => {
         is_limited_drop: formData.is_limited_drop,
         drop_date: formData.is_limited_drop && formData.drop_date ? new Date(formData.drop_date).toISOString() : null,
         tagline: formData.tagline,
-        size: formData.size,
-        finish: formData.finish,
-        material: formData.material,
-        movement_type: formData.movement_type,
+        attributes: attributesObject,
         summary: formData.summary,
         story: formData.story,
         care_instructions: formData.care_instructions.split('\n').map((item) => item.trim()).filter(Boolean),
@@ -411,18 +450,47 @@ const ProductForm = () => {
               </div>
             </div>
             <div className="settings-panel-body product-editor-grid product-editor-grid-half">
-              <Field label="Size">
-                <input type="text" name="size" value={formData.size} onChange={handleChange} placeholder="46 cm" />
-              </Field>
-              <Field label="Finish">
-                <input type="text" name="finish" value={formData.finish} onChange={handleChange} placeholder="Black walnut matte oil" />
-              </Field>
-              <Field label="Material">
-                <input type="text" name="material" value={formData.material} onChange={handleChange} placeholder="Walnut, brushed brass" />
-              </Field>
-              <Field label="Movement Type">
-                <input type="text" name="movement_type" value={formData.movement_type} onChange={handleChange} placeholder="Silent sweep quartz" />
-              </Field>
+              <div style={{ gridColumn: '1 / -1', display: 'grid', gap: '12px' }}>
+                <label className="field-label" style={{ fontWeight: 600 }}>Custom Specifications</label>
+                {(formData.attributes || []).length === 0 ? (
+                  <p style={{ color: 'var(--text-secondary, #888)', fontSize: '0.9rem', margin: 0 }}>
+                    No attributes added yet. Click below to add specifications like Dimensions, Weight, Materials, etc.
+                  </p>
+                ) : (
+                  <div style={{ display: 'grid', gap: '10px' }}>
+                    {(formData.attributes || []).map((attr, index) => (
+                      <div key={index} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '10px', alignItems: 'center' }}>
+                        <input
+                          type="text"
+                          placeholder="Attribute name (e.g. Dimensions)"
+                          value={attr.key}
+                          onChange={(e) => handleAttributeChange(index, 'key', e.target.value)}
+                        />
+                        <input
+                          type="text"
+                          placeholder="Value (e.g. 46 cm)"
+                          value={attr.value}
+                          onChange={(e) => handleAttributeChange(index, 'value', e.target.value)}
+                        />
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          onClick={() => handleRemoveAttribute(index)}
+                          title="Remove attribute"
+                        >
+                          <Trash size={16} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div>
+                  <button type="button" className="btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }} onClick={handleAddAttribute}>
+                    <Plus size={16} /> Add attribute
+                  </button>
+                </div>
+              </div>
               <Field label="Features" hint="One feature per line.">
                 <textarea
                   name="features"
