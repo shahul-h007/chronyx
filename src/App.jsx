@@ -123,6 +123,22 @@ function StoreApp() {
         );
         const stockLevelPercent = Math.max(0, Math.min(100, stockQuantity * 10));
 
+        const legacyAttributes = {};
+        if (p.size) legacyAttributes.Size = p.size;
+        if (p.finish) legacyAttributes.Finish = p.finish;
+        if (p.material) legacyAttributes.Material = p.material;
+        if (p.movement_type) legacyAttributes['Movement Type'] = p.movement_type;
+
+        const rawAttrs = p.attributes && typeof p.attributes === 'object' ? p.attributes : {};
+        const attributes = { ...legacyAttributes, ...rawAttrs };
+
+        const resolvedCare = attributes.care_instructions || attributes['Care Instructions'] || p.care_instructions;
+        const careInstructions = Array.isArray(resolvedCare)
+          ? resolvedCare
+          : (typeof resolvedCare === 'string' && resolvedCare.trim()
+              ? resolvedCare.split('\n').map((line) => line.trim()).filter(Boolean)
+              : []);
+
         return {
           id: p.id,
           name: p.name,
@@ -131,11 +147,9 @@ function StoreApp() {
           price: Number(p.price),
           stockQuantity,
           stockLevelPercent,
-          size: p.size,
-          finish: p.finish,
-          material: p.material,
-          movementType: p.movement_type,
-          careInstructions: p.care_instructions || [],
+          size: attributes.Size || attributes.size || '',
+          careInstructions,
+          attributes,
           tags: p.tags || [],
           dropDate: p.drop_date,
           hero: heroImg,

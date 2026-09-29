@@ -202,18 +202,14 @@ function ProductPage({ addToCart, products = [] }) {
               <span>Price</span>
               <strong className="product-price-value">{formatCurrency(product.price)}</strong>
             </div>
-            <div>
-              <span>Material</span>
-              <strong>{product.material}</strong>
-            </div>
-            <div>
-              <span>Size &amp; Finish</span>
-              <strong>{product.size} / {product.finish}</strong>
-            </div>
-            <div>
-              <span>Movement</span>
-              <strong>{product.movementType}</strong>
-            </div>
+            {Object.entries(product.attributes || {})
+              .filter(([_, value]) => value != null && String(value).trim() !== '')
+              .map(([key, value]) => (
+                <div key={key}>
+                  <span>{key}</span>
+                  <strong>{String(value)}</strong>
+                </div>
+              ))}
           </div>
 
           <label className="gift-wrap-row" htmlFor="giftWrap">
