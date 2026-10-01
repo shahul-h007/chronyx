@@ -54,6 +54,17 @@ function App() {
   );
 }
 
+const normalizeBooleanSetting = (value, fallback = false) => {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value !== 0;
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (['true', '1', 'yes', 'on'].includes(normalized)) return true;
+    if (['false', '0', 'no', 'off', ''].includes(normalized)) return false;
+  }
+  return fallback;
+};
+
 const DEFAULT_STORE_SETTINGS = {
   maintenance_mode: false,
   cod_enabled: true,
@@ -209,7 +220,12 @@ function StoreApp() {
         if (error) throw error;
         setSiteContent(buildSiteContent(data || []));
         const settingsRow = (data || []).find((item) => item.key === 'store_settings');
-        setStoreSettings((current) => ({ ...current, ...(settingsRow?.value || {}) }));
+        const nextStoreSettings = settingsRow?.value || {};
+        setStoreSettings((current) => ({
+          ...current,
+          ...nextStoreSettings,
+          show_journal: normalizeBooleanSetting(nextStoreSettings.show_journal, current.show_journal),
+        }));
       } catch (error) {
         console.error('Failed to fetch site content', error);
         setSiteContent(defaultSiteContent);
@@ -423,6 +439,7 @@ function StoreApp() {
   }, []);
 
   const publicStoreName = String(storeSettings.store_name || DEFAULT_STORE_SETTINGS.store_name).trim() || siteConfig.name;
+  const showJournal = normalizeBooleanSetting(storeSettings.show_journal, DEFAULT_STORE_SETTINGS.show_journal);
   const whatsappNumber = String(storeSettings.whatsapp_number || '')
     .replace(/\D/g, '')
     .replace(/^0+/, '');
@@ -443,7 +460,7 @@ function StoreApp() {
         setNotice={setNotice}
         wishlistCount={wishlist.length}
         user={user}
-        showJournal={Boolean(storeSettings.show_journal)}
+        showJournal={showJournal}
         storeName={publicStoreName}
         navContent={siteContent.navContent}
       />
@@ -541,11 +558,11 @@ function StoreApp() {
             <Route path="/contact" element={<ContactPage siteContent={siteContent} storeSettings={storeSettings} />} />
             <Route
               path="/blog"
-              element={storeSettings.show_journal ? <BlogPage /> : <Navigate to="/" replace />}
+              element={showJournal ? <BlogPage /> : <Navigate to="/" replace />}
             />
             <Route
               path="/journal/:slug"
-              element={storeSettings.show_journal ? <JournalArticlePage products={products} /> : <Navigate to="/" replace />}
+              element={showJournal ? <JournalArticlePage products={products} /> : <Navigate to="/" replace />}
             />
             <Route path="/account" element={<AccountPage user={user} />} />
             <Route path="/auth" element={<AuthPage user={user} />} />
