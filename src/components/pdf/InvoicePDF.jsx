@@ -1,7 +1,6 @@
 import React from 'react';
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
-
-// Register fonts if needed. Helvetica is built-in and works well for simple docs.
+import { siteConfig } from '../../config/siteConfig';
 
 const styles = StyleSheet.create({
   page: {
@@ -58,86 +57,94 @@ const styles = StyleSheet.create({
     width: '45%',
   },
   sectionTitle: {
-    fontSize: 9,
-    color: '#999999',
+    fontSize: 8,
+    fontFamily: 'Helvetica-Bold',
+    color: '#666666',
     marginBottom: 8,
     letterSpacing: 1,
   },
   boldText: {
     fontFamily: 'Helvetica-Bold',
-    fontSize: 11,
+    fontSize: 10,
     marginBottom: 4,
   },
   textLine: {
     marginBottom: 4,
-    color: '#444444',
+    lineHeight: 1.4,
   },
   table: {
     width: '100%',
     marginBottom: 30,
+    borderWidth: 1,
+    borderColor: '#EEEEEE',
   },
   tableHeaderRow: {
     flexDirection: 'row',
+    backgroundColor: '#F9F9F9',
     borderBottomWidth: 1,
     borderBottomColor: '#EEEEEE',
-    paddingBottom: 8,
-    marginBottom: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
   },
   tableHeaderCell: {
-    color: '#999999',
     fontSize: 8,
-    letterSpacing: 0.5,
+    fontFamily: 'Helvetica-Bold',
+    color: '#555555',
   },
   tableRow: {
     flexDirection: 'row',
-    paddingBottom: 12,
-    marginBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#FAFAFA',
+    borderBottomColor: '#EEEEEE',
+    paddingVertical: 8,
+    paddingHorizontal: 8,
   },
-  colItem: { width: '45%' },
-  colHsn: { width: '15%', textAlign: 'center' }, // This will be used for SKU
+  colItem: { width: '40%' },
+  colHsn: { width: '20%' },
   colQty: { width: '10%', textAlign: 'center' },
   colUnit: { width: '15%', textAlign: 'right' },
   colTotal: { width: '15%', textAlign: 'right' },
   itemName: {
     fontFamily: 'Helvetica-Bold',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   itemDesc: {
     fontSize: 8,
-    color: '#888888',
+    color: '#666666',
   },
   summaryBlock: {
-    width: '40%',
+    width: '50%',
     alignSelf: 'flex-end',
+    marginBottom: 40,
   },
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    paddingVertical: 4,
   },
   summaryLabel: {
+    fontSize: 9,
     color: '#666666',
   },
   summaryValue: {
+    fontSize: 9,
     textAlign: 'right',
   },
   totalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 8,
-    paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: '#333',
+    borderTopColor: '#333333',
+    paddingTop: 8,
+    marginTop: 4,
   },
   totalLabel: {
+    fontSize: 11,
     fontFamily: 'Helvetica-Bold',
-    fontSize: 12,
   },
   totalValue: {
+    fontSize: 11,
     fontFamily: 'Helvetica-Bold',
-    fontSize: 12,
+    textAlign: 'right',
   },
   footer: {
     position: 'absolute',
@@ -146,7 +153,6 @@ const styles = StyleSheet.create({
     right: 40,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
     borderTopWidth: 1,
     borderTopColor: '#EEEEEE',
     paddingTop: 12,
@@ -161,20 +167,28 @@ const styles = StyleSheet.create({
     color: '#888888',
     textAlign: 'right',
     lineHeight: 1.4,
-  }
+  },
 });
 
-const formatCurrency = (amount) => {
-  return 'Rs. ' + Math.round(amount).toLocaleString('en-IN');
+const formatCurrency = (amount, symbol = '₹') => {
+  return `${symbol}${Math.round(amount).toLocaleString('en-IN')}`;
 };
 
-const InvoicePDF = ({ order }) => {
-  // Defensive fallbacks
+const InvoicePDF = ({ order, storeConfig = siteConfig }) => {
   const safeOrder = order || {};
   const items = safeOrder.items || [];
-  const dateStr = safeOrder.created_at ? new Date(safeOrder.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : 'N/A';
-  
-  // Calculations
+  const dateStr = safeOrder.created_at
+    ? new Date(safeOrder.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+    : 'N/A';
+
+  const brandName = storeConfig?.name || siteConfig.name;
+  const brandTagline = storeConfig?.tagline || siteConfig.tagline;
+  const supportEmail = storeConfig?.contact?.supportEmail || storeConfig?.contact?.email || siteConfig.contact.email;
+  const contactPhone = storeConfig?.contact?.phone || siteConfig.contact.phone;
+  const storeAddress = storeConfig?.contact?.address?.formatted || siteConfig.contact.address.formatted;
+  const storeDomain = storeConfig?.domain || siteConfig.domain;
+  const currencySymbol = storeConfig?.localization?.currencySymbol || '₹';
+
   const itemsSum = items.reduce((acc, item) => acc + (item.lineTotal || 0), 0);
   const diff = (safeOrder.total || 0) - itemsSum;
   let shipping = 0;
@@ -184,22 +198,20 @@ const InvoicePDF = ({ order }) => {
 
   const shortId = safeOrder.id ? safeOrder.id.slice(0, 8).toUpperCase() : 'XXXX';
   const invoiceNo = `INV-${new Date().getFullYear()}-${shortId}`;
-
   const address = safeOrder.shipping_address || {};
 
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        
         {/* Header */}
         <View style={styles.headerRow}>
           <View>
-            <Text style={styles.brandName}>CHRONYX</Text>
-            <Text style={styles.tagline}>HANDCRAFTED WOODEN TIMEPIECES</Text>
-            <Text style={styles.companyDetails}>chronyxbrand@gmail.com</Text>
-            <Text style={styles.companyDetails}>+91 9562122618</Text>
-            <Text style={styles.companyDetails}>elambulassery, Kerala - 678595, India</Text>
-            <Text style={styles.companyDetails}>https://chronyx.in | @chronyx.ck</Text>
+            <Text style={styles.brandName}>{brandName}</Text>
+            {brandTagline ? <Text style={styles.tagline}>{brandTagline.toUpperCase()}</Text> : null}
+            {supportEmail ? <Text style={styles.companyDetails}>{supportEmail}</Text> : null}
+            {contactPhone ? <Text style={styles.companyDetails}>{contactPhone}</Text> : null}
+            {storeAddress ? <Text style={styles.companyDetails}>{storeAddress}</Text> : null}
+            {storeDomain ? <Text style={styles.companyDetails}>{storeDomain}</Text> : null}
           </View>
           <View>
             <Text style={styles.invoiceTitle}>INVOICE</Text>
@@ -241,21 +253,22 @@ const InvoicePDF = ({ order }) => {
 
           {/* Table Rows */}
           {items.map((item, index) => {
-            const total = item.lineTotal || (item.price * item.quantity) || 0;
-            const unitPrice = item.price || (total / (item.quantity || 1));
-            const isWalnut = item.name?.toLowerCase().includes('walnut');
-            const sku = `CRX-${isWalnut ? 'WN' : 'TK'}-00${index + 1}`;
+            const total = item.lineTotal || item.price * item.quantity || 0;
+            const unitPrice = item.price || total / (item.quantity || 1);
+            const sku = item.sku || `SKU-${String(index + 1).padStart(4, '0')}`;
 
             return (
               <View key={index} style={styles.tableRow}>
                 <View style={styles.colItem}>
                   <Text style={styles.itemName}>{item.name}</Text>
-                  <Text style={styles.itemDesc}>Silent sweep wooden clock</Text>
+                  {item.tagline || item.description ? (
+                    <Text style={styles.itemDesc}>{item.tagline || item.description}</Text>
+                  ) : null}
                 </View>
                 <Text style={[styles.textLine, styles.colHsn]}>{sku}</Text>
                 <Text style={[styles.textLine, styles.colQty]}>{item.quantity}</Text>
-                <Text style={[styles.textLine, styles.colUnit]}>{formatCurrency(unitPrice)}</Text>
-                <Text style={[styles.textLine, styles.colTotal]}>{formatCurrency(total)}</Text>
+                <Text style={[styles.textLine, styles.colUnit]}>{formatCurrency(unitPrice, currencySymbol)}</Text>
+                <Text style={[styles.textLine, styles.colTotal]}>{formatCurrency(total, currencySymbol)}</Text>
               </View>
             );
           })}
@@ -265,24 +278,24 @@ const InvoicePDF = ({ order }) => {
         <View style={styles.summaryBlock}>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Subtotal</Text>
-            <Text style={styles.summaryValue}>{formatCurrency(itemsSum)}</Text>
+            <Text style={styles.summaryValue}>{formatCurrency(itemsSum, currencySymbol)}</Text>
           </View>
-          
+
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Shipping / Fees</Text>
-            <Text style={styles.summaryValue}>{shipping > 0 ? formatCurrency(shipping) : 'Free'}</Text>
+            <Text style={styles.summaryValue}>{shipping > 0 ? formatCurrency(shipping, currencySymbol) : 'Free'}</Text>
           </View>
 
           {discount > 0 && (
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Discount</Text>
-              <Text style={[styles.summaryValue, { color: '#059669' }]}>-{formatCurrency(discount)}</Text>
+              <Text style={[styles.summaryValue, { color: '#059669' }]}>-{formatCurrency(discount, currencySymbol)}</Text>
             </View>
           )}
 
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Total paid</Text>
-            <Text style={styles.totalValue}>{formatCurrency(safeOrder.total || itemsSum)}</Text>
+            <Text style={styles.totalValue}>{formatCurrency(safeOrder.total || itemsSum, currencySymbol)}</Text>
           </View>
         </View>
 
@@ -293,15 +306,14 @@ const InvoicePDF = ({ order }) => {
             {safeOrder.razorpay_payment_id && (
               <Text style={styles.footerText}>Ref: {safeOrder.razorpay_payment_id}</Text>
             )}
-        <Text style={[styles.footerText, { marginTop: 4 }]}>Thank you for choosing CHRONYX.</Text>
-            <Text style={styles.footerText}>For support: chronyxbrand@gmail.com | +91 9562122618</Text>
+            <Text style={[styles.footerText, { marginTop: 4 }]}>Thank you for choosing {brandName}.</Text>
+            {supportEmail ? <Text style={styles.footerText}>Support: {supportEmail}</Text> : null}
           </View>
           <View>
             <Text style={styles.footerRightText}>This is a computer-generated invoice.</Text>
             <Text style={styles.footerRightText}>No signature required.</Text>
           </View>
         </View>
-
       </Page>
     </Document>
   );

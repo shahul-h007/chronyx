@@ -5,6 +5,8 @@ import { PDFDownloadLink } from '@react-pdf/renderer';
 import { supabase } from '../lib/supabase';
 import InvoicePDF from '../components/pdf/InvoicePDF';
 import { Star } from '@phosphor-icons/react';
+import { formatCurrency } from '../data/store';
+import { siteConfig } from '../config/siteConfig';
 
 const defaultProfile = {
   name: '',
@@ -137,7 +139,7 @@ function AccountPage({ user }) {
     <div className="page-stack account-page">
       <section className="page-header-panel account-hero">
         <p className="label">My Account</p>
-        <h1>Your CHRONYX workspace.</h1>
+        <h1>Your {siteConfig.name} workspace.</h1>
         <p className="hero-text">
           Track purchases, download invoices, manage saved details, and keep your account ready for the next release.
         </p>
@@ -234,14 +236,14 @@ function AccountPage({ user }) {
                             </div>
                             <div>
                               <span className="label">Total</span>
-                              <strong>INR {Number(order.total_amount || order.total || 0).toLocaleString('en-IN')}</strong>
+                              <strong>{formatCurrency(order.total_amount || order.total || 0)}</strong>
                             </div>
                           </div>
 
                           <div className="account-order-actions">
                             <PDFDownloadLink
                               document={<InvoicePDF order={order} />}
-                              fileName={`CHRONYX_Invoice_${displayId}.pdf`}
+                              fileName={`${siteConfig.name}_Invoice_${displayId}.pdf`}
                               style={{ textDecoration: 'none' }}
                             >
                               {({ loading }) => (

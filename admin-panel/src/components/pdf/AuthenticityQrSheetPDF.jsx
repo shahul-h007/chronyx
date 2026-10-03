@@ -1,5 +1,6 @@
 import { Document, Image, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
 import { buildUnitQrCodeUrl } from '../../lib/productIdentity';
+import { adminConfig } from '../../config/adminConfig';
 
 const styles = StyleSheet.create({
   page: {
@@ -61,29 +62,33 @@ const styles = StyleSheet.create({
   },
 });
 
-const AuthenticityQrSheetPDF = ({ order, units = [] }) => (
-  <Document>
-    <Page size="A4" style={styles.page}>
-      <View style={styles.header}>
-        <Text style={styles.title}>CHRONYX Authenticity QR Sheet</Text>
-        <Text style={styles.subtitle}>
-          QR labels for order {order.id?.slice(0, 8).toUpperCase()} · {order.customer_name || 'Customer'}.
-          Attach one label to each physical unit or include it with the matching certificate card.
-        </Text>
-      </View>
+const AuthenticityQrSheetPDF = ({ order, units = [], storeConfig = adminConfig }) => {
+  const brandName = storeConfig?.storeName || adminConfig.storeName;
 
-      <View style={styles.grid}>
-        {units.map((unit) => (
-          <View key={unit.id} style={styles.card}>
-            <Image style={styles.qr} src={buildUnitQrCodeUrl(unit)} />
-            <Text style={styles.label}>UNIT ID</Text>
-            <Text style={styles.unitId}>{unit.public_unit_id}</Text>
-            <Text style={styles.code}>{unit.authenticity_code}</Text>
-          </View>
-        ))}
-      </View>
-    </Page>
-  </Document>
-);
+  return (
+    <Document>
+      <Page size="A4" style={styles.page}>
+        <View style={styles.header}>
+          <Text style={styles.title}>{brandName} Authenticity QR Sheet</Text>
+          <Text style={styles.subtitle}>
+            QR labels for order {order.id?.slice(0, 8).toUpperCase()} · {order.customer_name || 'Customer'}.
+            Attach one label to each physical unit or include it with the matching certificate card.
+          </Text>
+        </View>
+
+        <View style={styles.grid}>
+          {units.map((unit) => (
+            <View key={unit.id} style={styles.card}>
+              <Image style={styles.qr} src={buildUnitQrCodeUrl(unit)} />
+              <Text style={styles.label}>UNIT ID</Text>
+              <Text style={styles.unitId}>{unit.public_unit_id}</Text>
+              <Text style={styles.code}>{unit.authenticity_code}</Text>
+            </View>
+          ))}
+        </View>
+      </Page>
+    </Document>
+  );
+};
 
 export default AuthenticityQrSheetPDF;

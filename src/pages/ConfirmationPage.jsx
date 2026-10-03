@@ -5,6 +5,7 @@ import { PDFDownloadLink } from '@react-pdf/renderer';
 import InvoicePDF from '../components/pdf/InvoicePDF';
 import SEO from '../components/SEO';
 import { trackPurchase } from '../lib/tracking';
+import { siteConfig } from '../config/siteConfig';
 
 function ConfirmationPage() {
   const location = useLocation();
@@ -31,15 +32,15 @@ function ConfirmationPage() {
     <div className="page-stack">
       <SEO
         title="Order Confirmed"
-        description="Your CHRONYX order confirmation, invoice access, and delivery tracking details."
+        description={`Your ${siteConfig.name} order confirmation, invoice access, and delivery tracking details.`}
         path="/confirmation"
       />
       <section className="confirmation-panel commerce-confirmation-panel">
         <CheckCircle size={68} weight="duotone" />
         <p className="label">Order Confirmed</p>
-        <h1>Your CHRONYX order is secured.</h1>
+        <h1>Your {siteConfig.name} order is secured.</h1>
         <p>
-          Thank you for choosing CHRONYX. Your order #{displayId} is now being prepared for
+          Thank you for choosing {siteConfig.name}. Your order #{displayId} is now being prepared for
           dispatch, and your receipt is ready below. A confirmation message should arrive at{' '}
           {orderEmail}.
         </p>
@@ -59,7 +60,7 @@ function ConfirmationPage() {
           {order.id ? (
             <PDFDownloadLink
               document={<InvoicePDF order={order} />}
-              fileName={`CHRONYX_Invoice_${displayId}.pdf`}
+              fileName={`${siteConfig.name}_Invoice_${displayId}.pdf`}
               style={{ textDecoration: 'none' }}
             >
               {({ loading }) => (

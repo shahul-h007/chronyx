@@ -3,6 +3,7 @@ import { CaretLeft, CreditCard, Wallet, Bank, Money } from '@phosphor-icons/reac
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { formatCurrency } from '../data/store';
 import { supabase } from '../lib/supabase';
+import { siteConfig } from '../config/siteConfig';
 
 function PaymentPage({ cartItems, cartTotal, shipping, payment, setPayment, clearCart, setNotice, refreshProducts }) {
   const navigate = useNavigate();
@@ -115,12 +116,13 @@ function PaymentPage({ cartItems, cartTotal, shipping, payment, setPayment, clea
 
         const selectedUnitIds = availableUnits.map((unit) => unit.id);
 
+        const fallbackGuestEmail = shipping.email || (siteConfig.domain ? `guest@${siteConfig.domain}` : 'guest@chronyx.in');
         const { error: assignError } = await supabase
           .from('product_auth_units')
           .update({
             status: 'assigned',
             order_id: orderId,
-            assigned_to_email: shipping.email || 'guest@chronyx.in',
+            assigned_to_email: fallbackGuestEmail,
             assigned_at: new Date().toISOString(),
           })
           .in('id', selectedUnitIds);
@@ -135,7 +137,7 @@ function PaymentPage({ cartItems, cartTotal, shipping, payment, setPayment, clea
   const processCodOrder = async () => {
     try {
       const orderData = {
-        customer_email: shipping.email || 'guest@chronyx.in',
+        customer_email: shipping.email || (siteConfig.domain ? `guest@${siteConfig.domain}` : 'guest@chronyx.in'),
         customer_name: shipping.name || 'Guest',
         items: cartItems.map(item => ({
           id: item.id,
@@ -226,8 +228,8 @@ function PaymentPage({ cartItems, cartTotal, shipping, payment, setPayment, clea
           key: import.meta.env.VITE_RAZORPAY_KEY_ID,
           amount: orderData.amount, 
           currency: orderData.currency,
-          name: 'Chronyx',
-          description: 'Luxury Timepieces',
+          name: storeSettings?.store_name || siteConfig.name || 'Chronyx',
+          description: storeSettings?.store_tagline || siteConfig.tagline || 'Luxury Timepieces',
           order_id: orderData.id,
           handler: async function (response) {
             setNotice('Verifying payment...');

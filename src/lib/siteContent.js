@@ -233,3 +233,21 @@ export function buildSiteContent(settingsRows = []) {
     footerContent: mergeDeep(defaultSiteContent.footerContent, byKey.footer_content),
   });
 }
+
+export function toBoolean(value, defaultValue = false) {
+  if (value === undefined || value === null) return defaultValue;
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') {
+    const s = value.trim().toLowerCase();
+    if (s === 'true' || s === '1' || s === 'yes' || s === 'on') return true;
+    if (s === 'false' || s === '0' || s === 'no' || s === 'off') return false;
+  }
+  if (typeof value === 'number') return value !== 0;
+  return Boolean(value);
+}
+
+export function isJournalPath(path) {
+  const cleanPath = String(path || '').trim();
+  return cleanPath === '/blog' || cleanPath === '/journal' || cleanPath.startsWith('/journal/');
+}
+

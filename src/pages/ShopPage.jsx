@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { formatCurrency } from '../data/store';
 import { Heart } from '@phosphor-icons/react';
 import SEO from '../components/SEO';
+import { siteConfig } from '../config/siteConfig';
 import { optimizeImage } from '../lib/optimizeImage';
 
 function ShopPage({ addToCart, setNotice, toggleWishlist, wishlist, products = [], collections = [] }) {
@@ -77,7 +78,7 @@ function ShopPage({ addToCart, setNotice, toggleWishlist, wishlist, products = [
     <div className="page-stack">
       <SEO 
         title="Luxury Wooden Wall Clocks | The Full Collection" 
-        description="Shop the entire CHRONYX collection of luxury wooden wall clocks. Find the perfect minimalist, silent timepiece for your home or office." 
+        description={`Shop the entire ${siteConfig.name} collection of luxury wooden wall clocks. Find the perfect minimalist, silent timepiece for your home or office.`} 
         path="/shop"
         noindex={searchParams.toString().length > 0}
       />
@@ -239,7 +240,7 @@ function ShopPage({ addToCart, setNotice, toggleWishlist, wishlist, products = [
                   {col.image_url && (
                     <img
                       src={optimizeImage(col.image_url)}
-                      alt={`${col.title} - CHRONYX luxury wooden wall clock collection`}
+                      alt={`${col.title} - ${siteConfig.name} luxury wooden wall clock collection`}
                       loading="lazy"
                       width="800"
                       height="800"

@@ -1,6 +1,23 @@
 import { useEffect, useState } from 'react';
-import { FloppyDisk, Spinner, UploadSimple } from '@phosphor-icons/react';
+import {
+  FloppyDisk,
+  Spinner,
+  UploadSimple,
+  CheckCircle,
+  WarningCircle,
+  X,
+  House,
+  BookOpen,
+  ShieldCheck,
+  Article,
+  ChatCircleText,
+  FileText,
+} from '@phosphor-icons/react';
 import { supabase } from '../lib/supabase';
+import AdminPageHeader from '../components/common/AdminPageHeader';
+import StatCard from '../components/common/StatCard';
+import StatusBadge from '../components/common/StatusBadge';
+import FormField from '../components/common/FormField';
 
 const defaultHero = {
   headline: '',
@@ -85,60 +102,61 @@ const parsePipeLines = (value, keys) =>
       keys.reduce((acc, key, index) => {
         acc[key] = parts[index] || '';
         return acc;
-      }, {}),
+      }, {})
     );
 
 const sections = [
-  { id: 'hero', label: 'Hero' },
-  { id: 'homepage', label: 'Homepage' },
-  { id: 'about', label: 'About' },
-  { id: 'contact', label: 'Contact' },
-  { id: 'policies', label: 'Policies' },
-  { id: 'footer', label: 'Footer' },
+  { id: 'hero', label: 'Hero Banner', icon: House },
+  { id: 'homepage', label: 'Homepage Curation', icon: Article },
+  { id: 'about', label: 'About Brand Story', icon: BookOpen },
+  { id: 'contact', label: 'Contact & Support', icon: ChatCircleText },
+  { id: 'policies', label: 'Legal Policies', icon: ShieldCheck },
+  { id: 'footer', label: 'Footer & Navigation', icon: FileText },
 ];
 
 const getSectionStatus = (count, total) => {
-  if (count === total) return 'Ready';
-  if (count === 0) return 'Empty';
-  return 'In Progress';
+  if (count === total) return { label: 'Ready', tone: 'success' };
+  if (count === 0) return { label: 'Empty', tone: 'neutral' };
+  return { label: 'In Progress', tone: 'warning' };
 };
-
-function FieldLabel({ children }) {
-  return <label className="cms-field-label">{children}</label>;
-}
-
-function FieldHint({ children }) {
-  return <p className="cms-field-hint">{children}</p>;
-}
 
 function SectionHeader({ title, body }) {
   return (
-    <div className="cms-section-header">
-      <h3>{title}</h3>
-      <p>{body}</p>
+    <div style={{ marginBottom: '18px', paddingBottom: '14px', borderBottom: '1px solid var(--admin-border)' }}>
+      <h3 style={{ fontSize: '1.05rem', fontWeight: 600, color: 'var(--admin-text)', margin: '0 0 4px' }}>{title}</h3>
+      <p style={{ margin: 0, fontSize: '0.86rem', color: 'var(--admin-text-muted)', lineHeight: 1.5 }}>{body}</p>
     </div>
   );
 }
 
 function PreviewNote({ title, children }) {
   return (
-    <div className="cms-preview-note">
-      <p className="cms-preview-note-label">{title}</p>
-      <div className="cms-preview-note-body">{children}</div>
+    <div
+      style={{
+        padding: '14px 16px',
+        border: '1px solid var(--admin-border)',
+        borderRadius: 'var(--admin-radius-md, 8px)',
+        background: 'var(--admin-surface-hover)',
+      }}
+    >
+      <div
+        style={{
+          fontSize: '0.75rem',
+          fontWeight: 600,
+          textTransform: 'uppercase',
+          letterSpacing: '0.08em',
+          color: 'var(--admin-text-muted)',
+          marginBottom: '8px',
+        }}
+      >
+        {title}
+      </div>
+      <div style={{ fontSize: '0.88rem', color: 'var(--admin-text)', lineHeight: 1.6 }}>{children}</div>
     </div>
   );
 }
 
-function SaveButton({ onClick, disabled, label }) {
-  return (
-    <button className="btn-primary cms-save-btn" onClick={onClick} disabled={disabled}>
-      <FloppyDisk size={16} />
-      {label}
-    </button>
-  );
-}
-
-function ImageSlotField({ label, hint, value, previewValue, onChange }) {
+function ImageSlotField({ label, hint, value, previewValue, onChange, onError }) {
   const [isUploading, setIsUploading] = useState(false);
   const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
   const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
@@ -148,7 +166,7 @@ function ImageSlotField({ label, hint, value, previewValue, onChange }) {
     if (!file) return;
 
     if (!cloudName || !uploadPreset) {
-      alert('Cloudinary upload is not configured in the admin panel environment.');
+      onError?.('Cloudinary upload is not configured in the admin panel environment.');
       event.target.value = '';
       return;
     }
@@ -170,7 +188,7 @@ function ImageSlotField({ label, hint, value, previewValue, onChange }) {
       onChange(data.secure_url);
     } catch (error) {
       console.error('Homepage image upload error:', error);
-      alert('Failed to upload homepage image. Please try again.');
+      onError?.('Failed to upload homepage image. Please try again.');
     } finally {
       setIsUploading(false);
       event.target.value = '';
@@ -178,54 +196,119 @@ function ImageSlotField({ label, hint, value, previewValue, onChange }) {
   };
 
   return (
-    <div className="cms-image-slot">
-      <FieldLabel>{label}</FieldLabel>
+    <div style={{ display: 'grid', gap: '10px' }}>
+      <label style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--admin-text)' }}>{label}</label>
 
-      <div className="cms-image-slot-preview">
+      <div
+        style={{
+          position: 'relative',
+          overflow: 'hidden',
+          border: '1px solid var(--admin-border)',
+          borderRadius: 'var(--admin-radius-md, 8px)',
+          background: 'var(--admin-surface-hover)',
+          minHeight: '180px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
         {previewValue ? (
           <>
-            <img src={previewValue} alt={label} />
-            <span className="cms-image-slot-badge">{value ? 'Current custom image' : 'Current live fallback'}</span>
+            <img
+              src={previewValue}
+              alt={label}
+              style={{ width: '100%', height: '180px', objectFit: 'cover', display: 'block' }}
+            />
+            <span
+              style={{
+                position: 'absolute',
+                left: '10px',
+                top: '10px',
+                padding: '4px 8px',
+                borderRadius: '999px',
+                background: 'rgba(15, 23, 42, 0.85)',
+                color: '#fff',
+                fontSize: '0.72rem',
+                fontWeight: 600,
+                letterSpacing: '0.04em',
+              }}
+            >
+              {value ? 'Custom image' : 'Live fallback'}
+            </span>
           </>
         ) : (
-          <div className="cms-image-slot-empty">
-            <UploadSimple size={20} />
+          <div style={{ textAlign: 'center', color: 'var(--admin-text-muted)', fontSize: '0.85rem' }}>
+            <UploadSimple size={24} style={{ margin: '0 auto 6px', display: 'block' }} />
             <span>No image selected yet</span>
           </div>
         )}
       </div>
 
-      <div className="cms-image-slot-controls">
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: '8px', alignItems: 'center' }}>
         <input
           type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder="https://..."
+          style={{
+            padding: '8px 12px',
+            fontSize: '0.85rem',
+            borderRadius: 'var(--admin-radius-sm, 6px)',
+            border: '1px solid var(--admin-border)',
+            background: 'var(--admin-surface)',
+            color: 'var(--admin-text)',
+          }}
         />
-        <label className="cms-upload-trigger">
+        <label
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '6px',
+            padding: '8px 14px',
+            borderRadius: 'var(--admin-radius-sm, 6px)',
+            border: '1px solid var(--admin-border)',
+            background: 'var(--admin-surface)',
+            color: 'var(--admin-text)',
+            fontSize: '0.84rem',
+            fontWeight: 500,
+            cursor: isUploading ? 'not-allowed' : 'pointer',
+          }}
+        >
           {isUploading ? (
             <>
-              <Spinner size={16} className="spin" />
-              Uploading...
+              <Spinner size={14} className="spin" />
+              <span>Uploading...</span>
             </>
           ) : (
             <>
-              <UploadSimple size={16} />
-              Upload
+              <UploadSimple size={14} />
+              <span>Upload</span>
             </>
           )}
-          <input type="file" accept="image/*" onChange={handleUpload} disabled={isUploading} />
+          <input type="file" accept="image/*" onChange={handleUpload} disabled={isUploading} style={{ display: 'none' }} />
         </label>
       </div>
 
       {previewValue ? (
-        <div className="cms-image-slot-meta">
-          <span>{value ? 'Custom slot URL' : 'Current fallback URL'}</span>
-          <code>{previewValue}</code>
+        <div
+          style={{
+            padding: '8px 10px',
+            border: '1px solid var(--admin-border)',
+            borderRadius: 'var(--admin-radius-sm, 6px)',
+            background: 'var(--admin-surface-hover)',
+            fontSize: '0.78rem',
+            wordBreak: 'break-all',
+          }}
+        >
+          <span style={{ color: 'var(--admin-text-muted)', fontWeight: 600, display: 'block', marginBottom: '2px' }}>
+            {value ? 'Custom URL' : 'Live Fallback URL'}
+          </span>
+          <code style={{ color: 'var(--admin-text)' }}>{previewValue}</code>
         </div>
       ) : null}
 
-      <FieldHint>{hint}</FieldHint>
+      {hint && <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--admin-text-muted)', lineHeight: 1.4 }}>{hint}</p>}
     </div>
   );
 }
@@ -234,6 +317,7 @@ function Content() {
   const [loading, setLoading] = useState(true);
   const [savingKey, setSavingKey] = useState('');
   const [productLibrary, setProductLibrary] = useState([]);
+  const [feedback, setFeedback] = useState(null);
 
   const [heroText, setHeroText] = useState(defaultHero);
   const [policies, setPolicies] = useState(defaultPolicies);
@@ -290,7 +374,7 @@ function Content() {
           pressMentionsText: joinLines(homepageData.value.pressMentions || [], (item) => item),
           testimonialsText: joinLines(
             homepageData.value.testimonials || [],
-            (item) => `${item.quote}|${item.author}|${item.location}`,
+            (item) => `${item.quote}|${item.author}|${item.location}`
           ),
           socialImagesText: joinLines(homepageData.value.socialImages || [], (item) => item),
         }));
@@ -304,7 +388,7 @@ function Content() {
           storyCardsText: joinLines(aboutData.value.storyCards || [], (item) => `${item.title}|${item.body}`),
           makingOfItemsText: joinLines(
             aboutData.value.makingOfItems || [],
-            (item) => `${item.img}|${item.title}|${item.text}`,
+            (item) => `${item.img}|${item.title}|${item.text}`
           ),
         }));
       }
@@ -321,16 +405,17 @@ function Content() {
           ...footerData.value,
           exploreLinksText: joinLines(
             footerData.value.exploreLinks || [],
-            (item) => `${item.label}|${item.path}`,
+            (item) => `${item.label}|${item.path}`
           ),
           supportLinksText: joinLines(
             footerData.value.supportLinks || [],
-            (item) => `${item.label}|${item.path}`,
+            (item) => `${item.label}|${item.path}`
           ),
         }));
       }
     } catch (error) {
       console.error('Error fetching content:', error.message);
+      setFeedback({ type: 'error', message: `Failed to load storefront content: ${error.message}` });
     } finally {
       setLoading(false);
     }
@@ -341,19 +426,19 @@ function Content() {
     try {
       const { error } = await supabase.from('settings').upsert({ key, value });
       if (error) throw error;
-      alert(successMessage);
+      setFeedback({ type: 'success', message: successMessage });
     } catch (error) {
-      alert(`Error saving ${key}: ${error.message}`);
+      setFeedback({ type: 'error', message: `Error saving ${key}: ${error.message}` });
     } finally {
       setSavingKey('');
     }
   };
 
   const handleSaveHero = () =>
-    saveSetting('hero_text', heroText, 'Hero content saved successfully.');
+    saveSetting('hero_text', heroText, 'Homepage hero banner saved successfully.');
 
   const handleSavePolicies = () =>
-    saveSetting('store_policies', policies, 'Policies saved successfully.');
+    saveSetting('store_policies', policies, 'Store policies saved successfully.');
 
   const handleSaveHomepage = () =>
     saveSetting(
@@ -378,7 +463,7 @@ function Content() {
         testimonials: parsePipeLines(homepageContent.testimonialsText, ['quote', 'author', 'location']),
         socialImages: parseSimpleLines(homepageContent.socialImagesText),
       },
-      'Homepage content saved successfully.',
+      'Homepage curation content saved successfully.'
     );
 
   const handleSaveAbout = () =>
@@ -394,7 +479,7 @@ function Content() {
         makingOfHeadline: aboutContent.makingOfHeadline,
         makingOfItems: parsePipeLines(aboutContent.makingOfItemsText, ['img', 'title', 'text']),
       },
-      'About page content saved successfully.',
+      'About page brand story saved successfully.'
     );
 
   const handleSaveContact = () =>
@@ -412,7 +497,7 @@ function Content() {
         successTitle: contactContent.successTitle,
         successBody: contactContent.successBody,
       },
-      'Contact page content saved successfully.',
+      'Contact page details saved successfully.'
     );
 
   const handleSaveFooter = () =>
@@ -427,7 +512,7 @@ function Content() {
         newsletterHeading: footerContent.newsletterHeading,
         newsletterText: footerContent.newsletterText,
       },
-      'Footer content saved successfully.',
+      'Footer content saved successfully.'
     );
 
   const heroProgress = [heroText.headline, heroText.subtext].filter(Boolean).length;
@@ -466,12 +551,12 @@ function Content() {
   ].filter(Boolean).length;
 
   const sectionStatuses = {
-    hero: { count: heroProgress, total: 2, label: getSectionStatus(heroProgress, 2) },
-    homepage: { count: homepageProgress, total: 5, label: getSectionStatus(Math.min(homepageProgress, 5), 5) },
-    about: { count: aboutProgress, total: 4, label: getSectionStatus(Math.min(aboutProgress, 4), 4) },
-    contact: { count: contactProgress, total: 4, label: getSectionStatus(contactProgress, 4) },
-    policies: { count: policyProgress, total: 4, label: getSectionStatus(policyProgress, 4) },
-    footer: { count: footerProgress, total: 6, label: getSectionStatus(Math.min(footerProgress, 6), 6) },
+    hero: getSectionStatus(heroProgress, 2),
+    homepage: getSectionStatus(Math.min(homepageProgress, 5), 5),
+    about: getSectionStatus(Math.min(aboutProgress, 4), 4),
+    contact: getSectionStatus(contactProgress, 4),
+    policies: getSectionStatus(policyProgress, 4),
+    footer: getSectionStatus(Math.min(footerProgress, 6), 6),
   };
 
   const heroProduct = productLibrary[0] || null;
@@ -514,664 +599,766 @@ function Content() {
       fallbackHeroImage,
   };
 
-  if (loading) return <div>Loading content...</div>;
-
-  return (
-    <div className="cms-page">
-      <div className="page-header">
-        <div>
-          <h2>Content CMS</h2>
-          <p className="cms-page-subtitle">
-            Manage the storefront content that now feeds the customer website with safe fallbacks.
-          </p>
+  if (loading) {
+    return (
+      <div className="admin-page-container">
+        <AdminPageHeader
+          eyebrow="Storefront CMS"
+          title="Pages & Content"
+          description="Manage copy, media, brand storytelling, and store policies across all customer-facing pages."
+        />
+        <div style={{ padding: '60px 0', textAlign: 'center', color: 'var(--admin-text-muted)' }}>
+          Loading storefront content...
         </div>
       </div>
+    );
+  }
 
-      <div className="cms-page-grid">
-        <aside className="card cms-sidebar-card">
-          <p className="cms-sidebar-label">Content Areas</p>
-          <div className="cms-jump-list">
-            {sections.map((section) => (
-              <a key={section.id} href={`#${section.id}`} className="cms-jump-link">
-                <span>{section.label}</span>
-                <span className="cms-jump-meta">{sectionStatuses[section.id].label}</span>
-              </a>
-            ))}
+  return (
+    <div className="admin-page-container" style={{ display: 'grid', gap: '24px' }}>
+      <AdminPageHeader
+        eyebrow="Storefront CMS"
+        title="Pages & Content"
+        description="Manage copy, media, brand storytelling, and store policies across all customer-facing pages."
+      />
+
+      {feedback && (
+        <div
+          role="status"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '12px 16px',
+            borderRadius: 'var(--admin-radius-md, 8px)',
+            fontSize: '0.9rem',
+            background: feedback.type === 'error' ? 'var(--admin-danger-subtle)' : 'var(--admin-success-subtle)',
+            color: feedback.type === 'error' ? 'var(--admin-danger)' : 'var(--admin-success)',
+            border: `1px solid ${feedback.type === 'error' ? 'var(--admin-danger)' : 'var(--admin-success)'}`,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {feedback.type === 'error' ? <WarningCircle size={18} /> : <CheckCircle size={18} />}
+            <span>{feedback.message}</span>
           </div>
-          <div className="cms-sidebar-note">
-            Existing product, order, payment, and settings logic stays untouched. These editors only
-            control content.
+          <button
+            type="button"
+            onClick={() => setFeedback(null)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: '4px' }}
+            aria-label="Dismiss notification"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+        <StatCard
+          label="Homepage Content"
+          value={sectionStatuses.homepage.label}
+          description="Hero banner, curation & testimonials"
+          icon={House}
+          tone={sectionStatuses.homepage.tone === 'success' ? 'success' : 'neutral'}
+        />
+        <StatCard
+          label="Brand Pages"
+          value={sectionStatuses.about.label}
+          description="Storytelling, craft & contact channels"
+          icon={BookOpen}
+          tone={sectionStatuses.about.tone === 'success' ? 'success' : 'neutral'}
+        />
+        <StatCard
+          label="Store Support & Legal"
+          value={sectionStatuses.policies.label}
+          description="Terms, privacy, refunds & shipping"
+          icon={ShieldCheck}
+          tone={sectionStatuses.policies.tone === 'success' ? 'success' : 'neutral'}
+        />
+      </div>
+
+      <div className="cms-page-grid" style={{ display: 'grid', gridTemplateColumns: '260px minmax(0, 1fr)', gap: '24px', alignItems: 'start' }}>
+        {/* Sticky section quick navigation */}
+        <aside
+          className="card"
+          style={{
+            position: 'sticky',
+            top: '24px',
+            padding: '16px',
+            display: 'grid',
+            gap: '12px',
+          }}
+        >
+          <div style={{ fontSize: '0.76rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--admin-text-muted)' }}>
+            Page Content Sections
+          </div>
+          <nav style={{ display: 'grid', gap: '6px' }}>
+            {sections.map((section) => {
+              const Icon = section.icon;
+              const status = sectionStatuses[section.id];
+              return (
+                <a
+                  key={section.id}
+                  href={`#${section.id}`}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '8px 12px',
+                    borderRadius: 'var(--admin-radius-sm, 6px)',
+                    border: '1px solid var(--admin-border)',
+                    background: 'var(--admin-surface)',
+                    color: 'var(--admin-text)',
+                    textDecoration: 'none',
+                    fontSize: '0.86rem',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Icon size={16} style={{ color: 'var(--admin-text-muted)' }} />
+                    <span style={{ fontWeight: 500 }}>{section.label}</span>
+                  </span>
+                  <StatusBadge status={status.tone}>{status.label}</StatusBadge>
+                </a>
+              );
+            })}
+          </nav>
+          <div
+            style={{
+              paddingTop: '12px',
+              borderTop: '1px solid var(--admin-border)',
+              color: 'var(--admin-text-muted)',
+              fontSize: '0.8rem',
+              lineHeight: 1.5,
+            }}
+          >
+            Product catalog, orders, and payment flows remain independent. These editors safely feed the live website.
           </div>
         </aside>
 
-        <div className="cms-sections">
-          <section className="cms-overview-grid">
-            <div className="card cms-overview-card">
-              <p className="cms-overview-label">Homepage</p>
-              <h3>{sectionStatuses.hero.label}</h3>
-              <p>Hero and homepage storytelling blocks are connected to the storefront.</p>
-            </div>
-            <div className="card cms-overview-card">
-              <p className="cms-overview-label">Brand Pages</p>
-              <h3>{sectionStatuses.about.label}</h3>
-              <p>About and contact content can now be edited without touching code.</p>
-            </div>
-            <div className="card cms-overview-card">
-              <p className="cms-overview-label">Store Support</p>
-              <h3>{sectionStatuses.policies.label}</h3>
-              <p>Policies and footer link groups stay editable from one place.</p>
-            </div>
-          </section>
-
-          <section id="hero" className="card cms-card">
+        {/* Content sections editors */}
+        <div style={{ display: 'grid', gap: '24px' }}>
+          {/* Section: Hero */}
+          <section id="hero" className="card" style={{ scrollMarginTop: '24px', padding: '24px' }}>
             <SectionHeader
-              title="Homepage Hero"
-              body="Preserves the existing hero save flow, now with the storefront reading it safely."
+              title="Homepage Hero Banner"
+              body="Configure the primary headline and supporting copy displayed above the fold on the homepage."
             />
-            <div className="cms-form-grid">
-              <div>
-                <FieldLabel>Main Headline</FieldLabel>
+            <div style={{ display: 'grid', gap: '16px' }}>
+              <FormField label="Main Headline" id="hero-headline">
                 <input
+                  id="hero-headline"
                   type="text"
                   value={heroText.headline}
                   onChange={(e) => setHeroText({ ...heroText, headline: e.target.value })}
                   placeholder="e.g. Precision in Every Second"
                 />
-              </div>
-              <div>
-                <FieldLabel>Subtext</FieldLabel>
+              </FormField>
+
+              <FormField label="Subtext" hint="Secondary tagline guiding the tone of the storefront" id="hero-subtext">
                 <textarea
+                  id="hero-subtext"
                   value={heroText.subtext}
                   onChange={(e) => setHeroText({ ...heroText, subtext: e.target.value })}
                   rows={3}
+                  placeholder="e.g. Handcrafted wooden wall clocks created for modern living spaces."
                 />
-              </div>
-              <PreviewNote title="Preview">
-                <h4>{heroText.headline || 'Your homepage headline will appear here.'}</h4>
-                <p>{heroText.subtext || 'Add a short supporting line to guide the tone of the hero section.'}</p>
+              </FormField>
+
+              <PreviewNote title="Storefront Banner Preview">
+                <div style={{ fontWeight: 600, fontSize: '1.05rem', marginBottom: '4px' }}>
+                  {heroText.headline || 'Your homepage headline will appear here.'}
+                </div>
+                <div style={{ color: 'var(--admin-text-muted)' }}>
+                  {heroText.subtext || 'Add a short supporting line to guide the tone of the hero section.'}
+                </div>
               </PreviewNote>
-              <div className="cms-actions-row">
-                <SaveButton
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '8px' }}>
+                <button
+                  type="button"
+                  className="btn-primary"
                   onClick={handleSaveHero}
                   disabled={savingKey === 'hero_text'}
-                  label={savingKey === 'hero_text' ? 'Saving...' : 'Save Hero'}
-                />
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+                >
+                  <FloppyDisk size={16} />
+                  {savingKey === 'hero_text' ? 'Saving...' : 'Save Hero Banner'}
+                </button>
               </div>
             </div>
           </section>
 
-          <section id="homepage" className="card cms-card">
+          {/* Section: Homepage Sections */}
+          <section id="homepage" className="card" style={{ scrollMarginTop: '24px', padding: '24px' }}>
             <SectionHeader
-              title="Homepage Sections"
-              body="Controls homepage supporting sections without changing product logic."
+              title="Homepage Curation & Storytelling"
+              body="Merchandising headlines, process steps, trust points, and press quotes for the homepage."
             />
-            <div className="cms-form-grid">
-              <div className="cms-two-col">
-                <div>
-                  <FieldLabel>Hero Eyebrow</FieldLabel>
+            <div style={{ display: 'grid', gap: '18px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+                <FormField label="Hero Eyebrow" id="hp-hero-eyebrow">
                   <input
+                    id="hp-hero-eyebrow"
                     type="text"
                     value={homepageContent.heroEyebrow}
                     onChange={(e) => setHomepageContent({ ...homepageContent, heroEyebrow: e.target.value })}
                   />
-                </div>
-                <div>
-                  <FieldLabel>Collection Eyebrow</FieldLabel>
+                </FormField>
+                <FormField label="Collection Eyebrow" id="hp-col-eyebrow">
                   <input
+                    id="hp-col-eyebrow"
                     type="text"
                     value={homepageContent.collectionEyebrow}
                     onChange={(e) => setHomepageContent({ ...homepageContent, collectionEyebrow: e.target.value })}
                   />
+                </FormField>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--admin-text)', display: 'block', marginBottom: '4px' }}>
+                  Homepage Visual Assets
+                </label>
+                <p style={{ margin: '0 0 14px', fontSize: '0.82rem', color: 'var(--admin-text-muted)' }}>
+                  Upload campaign-specific or transparent imagery for hero slots without modifying product gallery media.
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
+                  <ImageSlotField
+                    label="Hero Product Image"
+                    value={homepageContent.heroImage}
+                    previewValue={homepagePreviewImages.heroImage}
+                    onChange={(val) => setHomepageContent({ ...homepageContent, heroImage: val })}
+                    onError={(err) => setFeedback({ type: 'error', message: err })}
+                    hint="Used in the primary hero fold under the headline."
+                  />
+                  <ImageSlotField
+                    label="Signature Feature Image"
+                    value={homepageContent.signatureImage}
+                    previewValue={homepagePreviewImages.signatureImage}
+                    onChange={(val) => setHomepageContent({ ...homepageContent, signatureImage: val })}
+                    onError={(err) => setFeedback({ type: 'error', message: err })}
+                    hint="Used in the first feature section: The Core."
+                  />
+                  <ImageSlotField
+                    label="Secondary Feature Image"
+                    value={homepageContent.secondaryFeatureImage}
+                    previewValue={homepagePreviewImages.secondaryFeatureImage}
+                    onChange={(val) => setHomepageContent({ ...homepageContent, secondaryFeatureImage: val })}
+                    onError={(err) => setFeedback({ type: 'error', message: err })}
+                    hint="Used in the second product feature section."
+                  />
+                  <ImageSlotField
+                    label="Process: Design Image"
+                    value={homepageContent.processDesignImage}
+                    previewValue={homepagePreviewImages.processDesignImage}
+                    onChange={(val) => setHomepageContent({ ...homepageContent, processDesignImage: val })}
+                    onError={(err) => setFeedback({ type: 'error', message: err })}
+                    hint="Shown when the Design process step is active."
+                  />
+                  <ImageSlotField
+                    label="Process: Material Image"
+                    value={homepageContent.processMaterialImage}
+                    previewValue={homepagePreviewImages.processMaterialImage}
+                    onChange={(val) => setHomepageContent({ ...homepageContent, processMaterialImage: val })}
+                    onError={(err) => setFeedback({ type: 'error', message: err })}
+                    hint="Shown when the Material process step is active."
+                  />
+                  <ImageSlotField
+                    label="Process: Craft Image"
+                    value={homepageContent.processCraftImage}
+                    previewValue={homepagePreviewImages.processCraftImage}
+                    onChange={(val) => setHomepageContent({ ...homepageContent, processCraftImage: val })}
+                    onError={(err) => setFeedback({ type: 'error', message: err })}
+                    hint="Shown when the Craft step is active."
+                  />
+                  <ImageSlotField
+                    label="Process: Finish Image"
+                    value={homepageContent.processFinishImage}
+                    previewValue={homepagePreviewImages.processFinishImage}
+                    onChange={(val) => setHomepageContent({ ...homepageContent, processFinishImage: val })}
+                    onError={(err) => setFeedback({ type: 'error', message: err })}
+                    hint="Shown when the Finish step is active."
+                  />
                 </div>
               </div>
 
-              <div>
-                <FieldLabel>Homepage Image Slots</FieldLabel>
-                <FieldHint>
-                  These images are used only on the homepage, so you can upload cleaner transparent or campaign-specific visuals without reusing product gallery assets.
-                </FieldHint>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+                <FormField label="Collection Headline" id="hp-col-headline">
+                  <input
+                    id="hp-col-headline"
+                    type="text"
+                    value={homepageContent.collectionHeadline}
+                    onChange={(e) => setHomepageContent({ ...homepageContent, collectionHeadline: e.target.value })}
+                  />
+                </FormField>
+                <FormField label="Collection Summary" id="hp-col-summary">
+                  <textarea
+                    id="hp-col-summary"
+                    rows={2}
+                    value={homepageContent.collectionSummary}
+                    onChange={(e) => setHomepageContent({ ...homepageContent, collectionSummary: e.target.value })}
+                  />
+                </FormField>
               </div>
 
-              <div className="cms-image-grid">
-                <ImageSlotField
-                  label="Hero Product Image"
-                  value={homepageContent.heroImage}
-                  previewValue={homepagePreviewImages.heroImage}
-                  onChange={(value) => setHomepageContent({ ...homepageContent, heroImage: value })}
-                  hint="Used in the main hero section under the headline."
-                />
-                <ImageSlotField
-                  label="Signature Feature Image"
-                  value={homepageContent.signatureImage}
-                  previewValue={homepagePreviewImages.signatureImage}
-                  onChange={(value) => setHomepageContent({ ...homepageContent, signatureImage: value })}
-                  hint="Used in the first feature section: The Chronyx Core."
-                />
-                <ImageSlotField
-                  label="Secondary Feature Image"
-                  value={homepageContent.secondaryFeatureImage}
-                  previewValue={homepagePreviewImages.secondaryFeatureImage}
-                  onChange={(value) => setHomepageContent({ ...homepageContent, secondaryFeatureImage: value })}
-                  hint="Used in the second product feature section."
-                />
-                <ImageSlotField
-                  label="Process: Design Image"
-                  value={homepageContent.processDesignImage}
-                  previewValue={homepagePreviewImages.processDesignImage}
-                  onChange={(value) => setHomepageContent({ ...homepageContent, processDesignImage: value })}
-                  hint="Shown when the Design step is active."
-                />
-                <ImageSlotField
-                  label="Process: Material Image"
-                  value={homepageContent.processMaterialImage}
-                  previewValue={homepagePreviewImages.processMaterialImage}
-                  onChange={(value) => setHomepageContent({ ...homepageContent, processMaterialImage: value })}
-                  hint="Shown when the Material step is active."
-                />
-                <ImageSlotField
-                  label="Process: Craft Image"
-                  value={homepageContent.processCraftImage}
-                  previewValue={homepagePreviewImages.processCraftImage}
-                  onChange={(value) => setHomepageContent({ ...homepageContent, processCraftImage: value })}
-                  hint="Shown when the Craft step is active."
-                />
-                <ImageSlotField
-                  label="Process: Finish Image"
-                  value={homepageContent.processFinishImage}
-                  previewValue={homepagePreviewImages.processFinishImage}
-                  onChange={(value) => setHomepageContent({ ...homepageContent, processFinishImage: value })}
-                  hint="Shown when the Finish step is active."
-                />
-              </div>
-
-              <div>
-                <FieldLabel>Collection Headline</FieldLabel>
-                <input
-                  type="text"
-                  value={homepageContent.collectionHeadline}
-                  onChange={(e) => setHomepageContent({ ...homepageContent, collectionHeadline: e.target.value })}
-                />
-              </div>
-
-              <div>
-                <FieldLabel>Collection Summary</FieldLabel>
+              <FormField label="Founder Quote" hint="Personal brand quote highlighted on the homepage" id="hp-quote">
                 <textarea
-                  rows={3}
-                  value={homepageContent.collectionSummary}
-                  onChange={(e) => setHomepageContent({ ...homepageContent, collectionSummary: e.target.value })}
-                />
-              </div>
-
-              <div>
-                <FieldLabel>Founder Quote</FieldLabel>
-                <textarea
-                  rows={3}
+                  id="hp-quote"
+                  rows={2}
                   value={homepageContent.founderQuote}
                   onChange={(e) => setHomepageContent({ ...homepageContent, founderQuote: e.target.value })}
                 />
-              </div>
+              </FormField>
 
-              <div className="cms-two-col">
-                <div>
-                  <FieldLabel>Social Section Eyebrow</FieldLabel>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+                <FormField label="Social Section Eyebrow" id="hp-soc-eyebrow">
                   <input
+                    id="hp-soc-eyebrow"
                     type="text"
                     value={homepageContent.socialEyebrow}
                     onChange={(e) => setHomepageContent({ ...homepageContent, socialEyebrow: e.target.value })}
                   />
-                </div>
-                <div>
-                  <FieldLabel>Social Section Headline</FieldLabel>
+                </FormField>
+                <FormField label="Social Section Headline" id="hp-soc-headline">
                   <input
+                    id="hp-soc-headline"
                     type="text"
                     value={homepageContent.socialHeadline}
                     onChange={(e) => setHomepageContent({ ...homepageContent, socialHeadline: e.target.value })}
                   />
-                </div>
+                </FormField>
               </div>
 
-              <div>
-                <FieldLabel>Trust Items</FieldLabel>
+              <FormField label="Trust & Guarantee Items" hint="Format: Title|Body (one item per line)" id="hp-trust">
                 <textarea
-                  rows={4}
+                  id="hp-trust"
+                  rows={3}
                   value={homepageContent.trustItemsText}
                   onChange={(e) => setHomepageContent({ ...homepageContent, trustItemsText: e.target.value })}
-                  placeholder="Insured delivery|White-glove packaging and tracked dispatch."
+                  placeholder="Insured Delivery|White-glove packaging and tracked dispatch."
                 />
-                <FieldHint>One item per line: `Title|Body`</FieldHint>
-              </div>
+              </FormField>
 
-              <div>
-                <FieldLabel>Press Mentions</FieldLabel>
+              <FormField label="Press Mentions" hint="One publication or outlet name per line" id="hp-press">
                 <textarea
-                  rows={4}
+                  id="hp-press"
+                  rows={3}
                   value={homepageContent.pressMentionsText}
                   onChange={(e) => setHomepageContent({ ...homepageContent, pressMentionsText: e.target.value })}
-                  placeholder="Architectural Digest"
+                  placeholder="Architectural Digest&#10;Elle Decor"
                 />
-                <FieldHint>One publication name per line.</FieldHint>
-              </div>
+              </FormField>
 
-              <div>
-                <FieldLabel>Testimonials</FieldLabel>
+              <FormField label="Customer Testimonials" hint="Format: Quote|Author|Location (one per line)" id="hp-testimonials">
                 <textarea
-                  rows={6}
+                  id="hp-testimonials"
+                  rows={4}
                   value={homepageContent.testimonialsText}
                   onChange={(e) => setHomepageContent({ ...homepageContent, testimonialsText: e.target.value })}
-                  placeholder="A beautiful statement piece.|James M.|Mumbai"
+                  placeholder="A timeless statement piece.|James M.|Mumbai"
                 />
-                <FieldHint>One testimonial per line: `Quote|Author|Location`</FieldHint>
-              </div>
+              </FormField>
 
-              <div>
-                <FieldLabel>Social Gallery Images</FieldLabel>
+              <FormField label="Social Gallery Images" hint="One image URL per line" id="hp-social-imgs">
                 <textarea
-                  rows={5}
+                  id="hp-social-imgs"
+                  rows={3}
                   value={homepageContent.socialImagesText}
                   onChange={(e) => setHomepageContent({ ...homepageContent, socialImagesText: e.target.value })}
                   placeholder="https://..."
                 />
-                <FieldHint>One image URL per line.</FieldHint>
-              </div>
+              </FormField>
 
-              <PreviewNote title="What this controls">
-                <ul className="cms-preview-list">
-                  <li>{homepageContent.collectionHeadline || 'Collection headline not set yet.'}</li>
-                  <li>{homepageContent.founderQuote || 'Founder quote not set yet.'}</li>
-                  <li>
-                    {[
-                      homepageContent.heroImage,
-                      homepageContent.signatureImage,
-                      homepageContent.secondaryFeatureImage,
-                      homepageContent.processDesignImage,
-                      homepageContent.processMaterialImage,
-                      homepageContent.processCraftImage,
-                      homepageContent.processFinishImage,
-                    ].filter(Boolean).length} homepage image slot(s) filled
-                  </li>
-                  <li>{parseSimpleLines(homepageContent.trustItemsText).length} trust item(s)</li>
-                  <li>{parseSimpleLines(homepageContent.testimonialsText).length} testimonial(s)</li>
-                  <li>{parseSimpleLines(homepageContent.socialImagesText).length} social image URL(s)</li>
-                </ul>
+              <PreviewNote title="Homepage Snapshot">
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px' }}>
+                  <div><strong>Trust Points:</strong> {parseSimpleLines(homepageContent.trustItemsText).length}</div>
+                  <div><strong>Press Mentions:</strong> {parseSimpleLines(homepageContent.pressMentionsText).length}</div>
+                  <div><strong>Testimonials:</strong> {parseSimpleLines(homepageContent.testimonialsText).length}</div>
+                  <div><strong>Social Media:</strong> {parseSimpleLines(homepageContent.socialImagesText).length}</div>
+                </div>
               </PreviewNote>
 
-              <div className="cms-actions-row">
-                <SaveButton
+              <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '8px' }}>
+                <button
+                  type="button"
+                  className="btn-primary"
                   onClick={handleSaveHomepage}
                   disabled={savingKey === 'homepage_content'}
-                  label={savingKey === 'homepage_content' ? 'Saving...' : 'Save Homepage Sections'}
-                />
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+                >
+                  <FloppyDisk size={16} />
+                  {savingKey === 'homepage_content' ? 'Saving...' : 'Save Homepage Sections'}
+                </button>
               </div>
             </div>
           </section>
 
-          <section id="about" className="card cms-card">
+          {/* Section: About Page */}
+          <section id="about" className="card" style={{ scrollMarginTop: '24px', padding: '24px' }}>
             <SectionHeader
-              title="About Page"
-              body="Controls the about page story, values, and making-of section."
+              title="About Page & Brand Story"
+              body="Narrate the history, design philosophy, materials sourcing, and workshop assembly story."
             />
-            <div className="cms-form-grid">
-              <div className="cms-two-col">
-                <div>
-                  <FieldLabel>Page Eyebrow</FieldLabel>
+            <div style={{ display: 'grid', gap: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+                <FormField label="Page Eyebrow" id="abt-eyebrow">
                   <input
+                    id="abt-eyebrow"
                     type="text"
                     value={aboutContent.eyebrow}
                     onChange={(e) => setAboutContent({ ...aboutContent, eyebrow: e.target.value })}
                   />
-                </div>
-                <div>
-                  <FieldLabel>Page Title</FieldLabel>
+                </FormField>
+                <FormField label="Page Title" id="abt-title">
                   <input
+                    id="abt-title"
                     type="text"
                     value={aboutContent.title}
                     onChange={(e) => setAboutContent({ ...aboutContent, title: e.target.value })}
                   />
-                </div>
+                </FormField>
               </div>
 
-              <div>
-                <FieldLabel>Intro Headline</FieldLabel>
+              <FormField label="Intro Headline" id="abt-intro-headline">
                 <input
+                  id="abt-intro-headline"
                   type="text"
                   value={aboutContent.introHeadline}
                   onChange={(e) => setAboutContent({ ...aboutContent, introHeadline: e.target.value })}
                 />
-              </div>
+              </FormField>
 
-              <div>
-                <FieldLabel>Intro Body</FieldLabel>
+              <FormField label="Intro Body" id="abt-intro-body">
                 <textarea
-                  rows={4}
+                  id="abt-intro-body"
+                  rows={3}
                   value={aboutContent.introBody}
                   onChange={(e) => setAboutContent({ ...aboutContent, introBody: e.target.value })}
                 />
-              </div>
+              </FormField>
 
-              <div>
-                <FieldLabel>Story Cards</FieldLabel>
+              <FormField label="Story Cards" hint="Format: Title|Body (one card per line)" id="abt-story-cards">
                 <textarea
-                  rows={5}
+                  id="abt-story-cards"
+                  rows={4}
                   value={aboutContent.storyCardsText}
                   onChange={(e) => setAboutContent({ ...aboutContent, storyCardsText: e.target.value })}
-                  placeholder="Our Materials|We source only the finest hardwoods."
+                  placeholder="Sustainable Timber|We source responsibly harvested hardwood from certified forests."
                 />
-                <FieldHint>One card per line: `Title|Body`</FieldHint>
-              </div>
+              </FormField>
 
-              <div className="cms-two-col">
-                <div>
-                  <FieldLabel>Making-of Eyebrow</FieldLabel>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+                <FormField label="Making-of Eyebrow" id="abt-mo-eyebrow">
                   <input
+                    id="abt-mo-eyebrow"
                     type="text"
                     value={aboutContent.makingOfEyebrow}
                     onChange={(e) => setAboutContent({ ...aboutContent, makingOfEyebrow: e.target.value })}
                   />
-                </div>
-                <div>
-                  <FieldLabel>Making-of Headline</FieldLabel>
+                </FormField>
+                <FormField label="Making-of Headline" id="abt-mo-headline">
                   <input
+                    id="abt-mo-headline"
                     type="text"
                     value={aboutContent.makingOfHeadline}
                     onChange={(e) => setAboutContent({ ...aboutContent, makingOfHeadline: e.target.value })}
                   />
-                </div>
+                </FormField>
               </div>
 
-              <div>
-                <FieldLabel>Making-of Cards</FieldLabel>
+              <FormField label="Making-of Cards" hint="Format: Image URL|Title|Body (one card per line)" id="abt-mo-cards">
                 <textarea
-                  rows={6}
+                  id="abt-mo-cards"
+                  rows={4}
                   value={aboutContent.makingOfItemsText}
                   onChange={(e) => setAboutContent({ ...aboutContent, makingOfItemsText: e.target.value })}
-                  placeholder="https://image-url|Sourcing the Timber|We work directly with sustainable mills."
+                  placeholder="https://...|Sourcing the Timber|We work directly with certified sustainable mills."
                 />
-                <FieldHint>One card per line: `Image URL|Title|Body`</FieldHint>
-              </div>
+              </FormField>
 
-              <PreviewNote title="About page snapshot">
-                <ul className="cms-preview-list">
-                  <li>{aboutContent.title || 'Page title not set yet.'}</li>
-                  <li>{aboutContent.introHeadline || 'Intro headline not set yet.'}</li>
-                  <li>{parseSimpleLines(aboutContent.storyCardsText).length} story card(s)</li>
-                  <li>{parseSimpleLines(aboutContent.makingOfItemsText).length} making-of card(s)</li>
-                </ul>
+              <PreviewNote title="About Page Overview">
+                <div><strong>Title:</strong> {aboutContent.title || 'Not set'}</div>
+                <div><strong>Story Cards:</strong> {parseSimpleLines(aboutContent.storyCardsText).length} defined</div>
+                <div><strong>Behind The Scenes Steps:</strong> {parseSimpleLines(aboutContent.makingOfItemsText).length} defined</div>
               </PreviewNote>
 
-              <div className="cms-actions-row">
-                <SaveButton
+              <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '8px' }}>
+                <button
+                  type="button"
+                  className="btn-primary"
                   onClick={handleSaveAbout}
                   disabled={savingKey === 'about_page_content'}
-                  label={savingKey === 'about_page_content' ? 'Saving...' : 'Save About Page'}
-                />
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+                >
+                  <FloppyDisk size={16} />
+                  {savingKey === 'about_page_content' ? 'Saving...' : 'Save About Page'}
+                </button>
               </div>
             </div>
           </section>
 
-          <section id="contact" className="card cms-card">
+          {/* Section: Contact Page */}
+          <section id="contact" className="card" style={{ scrollMarginTop: '24px', padding: '24px' }}>
             <SectionHeader
-              title="Contact Page"
-              body="Manages support copy, support email, address, and success messaging."
+              title="Contact Page & Support Channels"
+              body="Customer service contact details, studio physical address, and inquiry submission confirmation."
             />
-            <div className="cms-form-grid">
-              <div className="cms-two-col">
-                <div>
-                  <FieldLabel>Page Eyebrow</FieldLabel>
+            <div style={{ display: 'grid', gap: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+                <FormField label="Page Eyebrow" id="cnt-eyebrow">
                   <input
+                    id="cnt-eyebrow"
                     type="text"
                     value={contactContent.eyebrow}
                     onChange={(e) => setContactContent({ ...contactContent, eyebrow: e.target.value })}
                   />
-                </div>
-                <div>
-                  <FieldLabel>Page Title</FieldLabel>
+                </FormField>
+                <FormField label="Page Title" id="cnt-title">
                   <input
+                    id="cnt-title"
                     type="text"
                     value={contactContent.title}
                     onChange={(e) => setContactContent({ ...contactContent, title: e.target.value })}
                   />
-                </div>
+                </FormField>
               </div>
 
-              <div>
-                <FieldLabel>Intro Headline</FieldLabel>
-                <input
-                  type="text"
-                  value={contactContent.introHeadline}
-                  onChange={(e) => setContactContent({ ...contactContent, introHeadline: e.target.value })}
-                />
-              </div>
-
-              <div>
-                <FieldLabel>Intro Body</FieldLabel>
-                <textarea
-                  rows={3}
-                  value={contactContent.introBody}
-                  onChange={(e) => setContactContent({ ...contactContent, introBody: e.target.value })}
-                />
-              </div>
-
-              <div className="cms-two-col">
-                <div>
-                  <FieldLabel>Support Heading</FieldLabel>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+                <FormField label="Intro Headline" id="cnt-intro-headline">
                   <input
+                    id="cnt-intro-headline"
                     type="text"
-                    value={contactContent.supportHeading}
-                    onChange={(e) => setContactContent({ ...contactContent, supportHeading: e.target.value })}
+                    value={contactContent.introHeadline}
+                    onChange={(e) => setContactContent({ ...contactContent, introHeadline: e.target.value })}
                   />
-                </div>
-                <div>
-                  <FieldLabel>Support Email</FieldLabel>
+                </FormField>
+                <FormField label="Support Email" id="cnt-email">
                   <input
+                    id="cnt-email"
                     type="email"
                     value={contactContent.supportEmail}
                     onChange={(e) => setContactContent({ ...contactContent, supportEmail: e.target.value })}
                   />
-                </div>
+                </FormField>
               </div>
 
-              <div>
-                <FieldLabel>Support Body</FieldLabel>
+              <FormField label="Intro Body Copy" id="cnt-intro-body">
                 <textarea
-                  rows={3}
+                  id="cnt-intro-body"
+                  rows={2}
+                  value={contactContent.introBody}
+                  onChange={(e) => setContactContent({ ...contactContent, introBody: e.target.value })}
+                />
+              </FormField>
+
+              <FormField label="Support Heading" id="cnt-support-heading">
+                <input
+                  id="cnt-support-heading"
+                  type="text"
+                  value={contactContent.supportHeading}
+                  onChange={(e) => setContactContent({ ...contactContent, supportHeading: e.target.value })}
+                />
+              </FormField>
+
+              <FormField label="Support Details" id="cnt-support-body">
+                <textarea
+                  id="cnt-support-body"
+                  rows={2}
                   value={contactContent.supportBody}
                   onChange={(e) => setContactContent({ ...contactContent, supportBody: e.target.value })}
                 />
-              </div>
+              </FormField>
 
-              <div>
-                <FieldLabel>Studio Address</FieldLabel>
+              <FormField label="Studio Address" hint="One address row per line" id="cnt-address">
                 <textarea
-                  rows={4}
+                  id="cnt-address"
+                  rows={3}
                   value={contactContent.studioAddress}
                   onChange={(e) => setContactContent({ ...contactContent, studioAddress: e.target.value })}
                 />
-                <FieldHint>One address line per row.</FieldHint>
-              </div>
+              </FormField>
 
-              <div className="cms-two-col">
-                <div>
-                  <FieldLabel>Success Title</FieldLabel>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+                <FormField label="Success Message Title" id="cnt-success-title">
                   <input
+                    id="cnt-success-title"
                     type="text"
                     value={contactContent.successTitle}
                     onChange={(e) => setContactContent({ ...contactContent, successTitle: e.target.value })}
                   />
-                </div>
-                <div>
-                  <FieldLabel>Success Body</FieldLabel>
+                </FormField>
+                <FormField label="Success Message Body" id="cnt-success-body">
                   <input
+                    id="cnt-success-body"
                     type="text"
                     value={contactContent.successBody}
                     onChange={(e) => setContactContent({ ...contactContent, successBody: e.target.value })}
                   />
-                </div>
+                </FormField>
               </div>
 
-              <PreviewNote title="Customer contact details">
-                <ul className="cms-preview-list">
-                  <li>{contactContent.supportEmail || 'Support email not set yet.'}</li>
-                  <li>{contactContent.supportHeading || 'Support heading not set yet.'}</li>
-                  <li>{contactContent.successTitle || 'Success title not set yet.'}</li>
-                </ul>
-              </PreviewNote>
-
-              <div className="cms-actions-row">
-                <SaveButton
+              <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '8px' }}>
+                <button
+                  type="button"
+                  className="btn-primary"
                   onClick={handleSaveContact}
                   disabled={savingKey === 'contact_page_content'}
-                  label={savingKey === 'contact_page_content' ? 'Saving...' : 'Save Contact Page'}
-                />
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+                >
+                  <FloppyDisk size={16} />
+                  {savingKey === 'contact_page_content' ? 'Saving...' : 'Save Contact Page'}
+                </button>
               </div>
             </div>
           </section>
 
-          <section id="policies" className="card cms-card">
+          {/* Section: Store Policies */}
+          <section id="policies" className="card" style={{ scrollMarginTop: '24px', padding: '24px' }}>
             <SectionHeader
-              title="Store Policies"
-              body="Preserves the existing policy save flow and adds a refund field now used by the storefront."
+              title="Store Policies & Legal Terms"
+              body="Ensure legal compliance with clear terms, privacy disclosures, return policies, and shipping timelines."
             />
-            <div className="cms-form-grid">
-              <div>
-                <FieldLabel>Privacy Policy</FieldLabel>
+            <div style={{ display: 'grid', gap: '16px' }}>
+              <FormField label="Privacy Policy" hint="Data protection, cookies, and customer privacy details" id="pol-privacy">
                 <textarea
+                  id="pol-privacy"
+                  rows={4}
                   value={policies.privacy || ''}
                   onChange={(e) => setPolicies({ ...policies, privacy: e.target.value })}
-                  rows={5}
+                  placeholder="Detail how customer data is processed and stored..."
                 />
-              </div>
-              <div>
-                <FieldLabel>Terms &amp; Conditions</FieldLabel>
+              </FormField>
+
+              <FormField label="Terms & Conditions" hint="Purchase agreements, warranty limitations, and jurisdiction" id="pol-terms">
                 <textarea
+                  id="pol-terms"
+                  rows={4}
                   value={policies.terms || ''}
                   onChange={(e) => setPolicies({ ...policies, terms: e.target.value })}
-                  rows={5}
+                  placeholder="Detail ordering terms, payment acceptance, and intellectual property..."
                 />
-              </div>
-              <div>
-                <FieldLabel>Refund &amp; Return Policy</FieldLabel>
+              </FormField>
+
+              <FormField label="Refund & Return Policy" hint="Window for returns, condition requirements, and exchange process" id="pol-refund">
                 <textarea
+                  id="pol-refund"
+                  rows={4}
                   value={policies.refund || ''}
                   onChange={(e) => setPolicies({ ...policies, refund: e.target.value })}
-                  rows={5}
+                  placeholder="Detail return eligibility, return shipment logistics, and refund timelines..."
                 />
-              </div>
-              <div>
-                <FieldLabel>Shipping Policy</FieldLabel>
+              </FormField>
+
+              <FormField label="Shipping & Dispatch Policy" hint="Carriers, transit times, handling duration, and tracking" id="pol-shipping">
                 <textarea
+                  id="pol-shipping"
+                  rows={4}
                   value={policies.shipping || ''}
                   onChange={(e) => setPolicies({ ...policies, shipping: e.target.value })}
-                  rows={5}
+                  placeholder="Detail domestic and international shipping schedules and courier partners..."
                 />
-              </div>
-              <PreviewNote title="Policy coverage">
-                <ul className="cms-preview-list">
-                  <li>{policies.privacy ? 'Privacy policy added' : 'Privacy policy missing'}</li>
-                  <li>{policies.terms ? 'Terms added' : 'Terms missing'}</li>
-                  <li>{policies.refund ? 'Refund policy added' : 'Refund policy missing'}</li>
-                  <li>{policies.shipping ? 'Shipping policy added' : 'Shipping policy missing'}</li>
-                </ul>
-              </PreviewNote>
-              <div className="cms-actions-row">
-                <SaveButton
+              </FormField>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '8px' }}>
+                <button
+                  type="button"
+                  className="btn-primary"
                   onClick={handleSavePolicies}
                   disabled={savingKey === 'store_policies'}
-                  label={savingKey === 'store_policies' ? 'Saving...' : 'Save Policies'}
-                />
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+                >
+                  <FloppyDisk size={16} />
+                  {savingKey === 'store_policies' ? 'Saving...' : 'Save Policies'}
+                </button>
               </div>
             </div>
           </section>
 
-          <section id="footer" className="card cms-card">
+          {/* Section: Footer */}
+          <section id="footer" className="card" style={{ scrollMarginTop: '24px', padding: '24px' }}>
             <SectionHeader
-              title="Footer"
-              body="Controls footer copy and link groups without changing routing logic."
+              title="Storefront Footer & Navigation"
+              body="Configure footer branding text, quick links columns, and newsletter invitation copy."
             />
-            <div className="cms-form-grid">
-              <div>
-                <FieldLabel>Brand Copy</FieldLabel>
+            <div style={{ display: 'grid', gap: '16px' }}>
+              <FormField label="Brand Copy / Mission Statement" hint="Short summary displayed under the brand mark in the footer" id="ft-brand">
                 <textarea
+                  id="ft-brand"
                   rows={3}
                   value={footerContent.brandCopy}
                   onChange={(e) => setFooterContent({ ...footerContent, brandCopy: e.target.value })}
                 />
-              </div>
+              </FormField>
 
-              <div className="cms-two-col">
-                <div>
-                  <FieldLabel>Explore Heading</FieldLabel>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+                <FormField label="Explore Column Heading" id="ft-exp-head">
                   <input
+                    id="ft-exp-head"
                     type="text"
                     value={footerContent.exploreHeading}
                     onChange={(e) => setFooterContent({ ...footerContent, exploreHeading: e.target.value })}
                   />
-                </div>
-                <div>
-                  <FieldLabel>Support Heading</FieldLabel>
+                </FormField>
+                <FormField label="Support / Legal Column Heading" id="ft-sup-head">
                   <input
+                    id="ft-sup-head"
                     type="text"
                     value={footerContent.supportHeading}
                     onChange={(e) => setFooterContent({ ...footerContent, supportHeading: e.target.value })}
                   />
-                </div>
+                </FormField>
               </div>
 
-              <div>
-                <FieldLabel>Explore Links</FieldLabel>
-                <textarea
-                  rows={4}
-                  value={footerContent.exploreLinksText}
-                  onChange={(e) => setFooterContent({ ...footerContent, exploreLinksText: e.target.value })}
-                  placeholder="Shop All|/shop"
-                />
-                <FieldHint>One link per line: `Label|Path`</FieldHint>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+                <FormField label="Explore Navigation Links" hint="Format: Label|Path (one link per line)" id="ft-exp-links">
+                  <textarea
+                    id="ft-exp-links"
+                    rows={4}
+                    value={footerContent.exploreLinksText}
+                    onChange={(e) => setFooterContent({ ...footerContent, exploreLinksText: e.target.value })}
+                    placeholder="Shop All|/shop&#10;Our Story|/about"
+                  />
+                </FormField>
+                <FormField label="Support Navigation Links" hint="Format: Label|Path (one link per line)" id="ft-sup-links">
+                  <textarea
+                    id="ft-sup-links"
+                    rows={4}
+                    value={footerContent.supportLinksText}
+                    onChange={(e) => setFooterContent({ ...footerContent, supportLinksText: e.target.value })}
+                    placeholder="Privacy & Policies|/policies&#10;Track Order|/track"
+                  />
+                </FormField>
               </div>
 
-              <div>
-                <FieldLabel>Support Links</FieldLabel>
-                <textarea
-                  rows={4}
-                  value={footerContent.supportLinksText}
-                  onChange={(e) => setFooterContent({ ...footerContent, supportLinksText: e.target.value })}
-                  placeholder="Privacy & Policies|/policies"
-                />
-                <FieldHint>One link per line: `Label|Path`</FieldHint>
-              </div>
-
-              <div className="cms-two-col">
-                <div>
-                  <FieldLabel>Newsletter Heading</FieldLabel>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+                <FormField label="Newsletter Heading" id="ft-nl-head">
                   <input
+                    id="ft-nl-head"
                     type="text"
                     value={footerContent.newsletterHeading}
                     onChange={(e) => setFooterContent({ ...footerContent, newsletterHeading: e.target.value })}
                   />
-                </div>
-                <div>
-                  <FieldLabel>Newsletter Copy</FieldLabel>
+                </FormField>
+                <FormField label="Newsletter Description" id="ft-nl-text">
                   <input
+                    id="ft-nl-text"
                     type="text"
                     value={footerContent.newsletterText}
                     onChange={(e) => setFooterContent({ ...footerContent, newsletterText: e.target.value })}
                   />
-                </div>
+                </FormField>
               </div>
 
-              <PreviewNote title="Footer snapshot">
-                <ul className="cms-preview-list">
-                  <li>{footerContent.exploreHeading || 'Explore heading not set yet.'}</li>
-                  <li>{footerContent.supportHeading || 'Support heading not set yet.'}</li>
-                  <li>{parseSimpleLines(footerContent.exploreLinksText).length} explore link(s)</li>
-                  <li>{parseSimpleLines(footerContent.supportLinksText).length} support link(s)</li>
-                </ul>
-              </PreviewNote>
-
-              <div className="cms-actions-row">
-                <SaveButton
+              <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '8px' }}>
+                <button
+                  type="button"
+                  className="btn-primary"
                   onClick={handleSaveFooter}
                   disabled={savingKey === 'footer_content'}
-                  label={savingKey === 'footer_content' ? 'Saving...' : 'Save Footer'}
-                />
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+                >
+                  <FloppyDisk size={16} />
+                  {savingKey === 'footer_content' ? 'Saving...' : 'Save Footer'}
+                </button>
               </div>
             </div>
           </section>

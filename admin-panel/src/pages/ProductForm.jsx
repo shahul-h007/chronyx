@@ -1,14 +1,35 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowSquareOut, CaretLeft, DownloadSimple, Eye, FloppyDisk, Package, Palette, Plus, PlusCircle, Sparkle, Trash } from '@phosphor-icons/react';
+import {
+  ArrowLeft,
+  ArrowSquareOut,
+  CheckCircle,
+  CurrencyInr,
+  DownloadSimple,
+  FloppyDisk,
+  Image as ImageIcon,
+  Package,
+  Plus,
+  PlusCircle,
+  Sliders,
+  Sparkle,
+  Trash,
+  WarningCircle,
+  X,
+} from '@phosphor-icons/react';
 import { supabase } from '../lib/supabase';
 import ImageUpload from '../components/ImageUpload';
+import AdminPageHeader from '../components/common/AdminPageHeader';
+import FormField from '../components/common/FormField';
+import ToggleSwitch from '../components/common/ToggleSwitch';
+import StatusBadge from '../components/common/StatusBadge';
 import {
   buildPublicProductId,
   buildUnitQrCodeUrl,
   buildUnitVerificationUrl,
   createAuthenticityUnit,
 } from '../lib/productIdentity';
+import { adminConfig, formatCurrency } from '../config/adminConfig';
 
 const defaultFormData = {
   name: '',
@@ -50,16 +71,6 @@ function InfoPill({ icon, label, value }) {
   );
 }
 
-function Field({ label, hint, children }) {
-  return (
-    <label className="settings-label product-editor-field">
-      <span>{label}</span>
-      {children}
-      {hint ? <small className="settings-hint">{hint}</small> : null}
-    </label>
-  );
-}
-
 const ProductForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -73,6 +84,8 @@ const ProductForm = () => {
   const [authError, setAuthError] = useState('');
   const [syncingUnits, setSyncingUnits] = useState(false);
   const [downloadingUnitId, setDownloadingUnitId] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
 
   useEffect(() => {
     if (isEditing) {
@@ -82,6 +95,7 @@ const ProductForm = () => {
 
   const fetchProduct = async () => {
     try {
+      setErrorMessage('');
       const { data: product, error: productError } = await supabase
         .from('products')
         .select('*')
@@ -150,8 +164,7 @@ const ProductForm = () => {
       await loadAuthUnits(product.id);
     } catch (error) {
       console.error('Error fetching product:', error.message);
-      alert('Error loading product');
-      navigate('/products');
+      setErrorMessage(`Error loading product: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -230,7 +243,7 @@ const ProductForm = () => {
       window.URL.revokeObjectURL(objectUrl);
     } catch (error) {
       console.error('Error downloading QR:', error.message);
-      alert(`Error downloading QR: ${error.message}`);
+      setErrorMessage(`Error downloading QR: ${error.message}`);
     } finally {
       setDownloadingUnitId('');
     }
@@ -269,6 +282,8 @@ const ProductForm = () => {
   const handleSubmit = async (event) => {
     event.preventDefault();
     setSaving(true);
+    setErrorMessage('');
+    setSuccessMessage('');
 
     try {
       const attributesObject = (formData.attributes || []).reduce((acc, { key, value }) => {
@@ -335,11 +350,13 @@ const ProductForm = () => {
       }
 
       await syncAuthenticityUnits(productId, productPayload.name, productPayload.stock_quantity);
-      alert('Product saved successfully!');
-      navigate('/products');
+      setSuccessMessage('Product saved successfully!');
+      setTimeout(() => {
+        navigate('/products');
+      }, 600);
     } catch (error) {
       console.error('Error saving product:', error.message);
-      alert(`Error saving product: ${error.message}`);
+      setErrorMessage(`Error saving product: ${error.message}`);
     } finally {
       setSaving(false);
     }
@@ -359,49 +376,104 @@ const ProductForm = () => {
   const issuedUnitCount = authUnits.length;
   const missingUnitCount = Math.max(0, Number(formData.stock_quantity || 0) - issuedUnitCount);
 
-  if (loading) return <div>Loading product editor...</div>;
+  if (loading) {
+    return (
+      <div className="product-editor-page" style={{ padding: '40px 0', textAlign: 'center' }}>
+        <p style={{ color: 'var(--admin-text-muted)' }}>Loading product editor...</p>
+      </div>
+    );
+  }
 
   return (
     <form className="product-editor-page" onSubmit={handleSubmit}>
-      <div className="page-header product-editor-header">
-        <div className="product-editor-title-row">
-          <button className="btn-secondary product-editor-back" type="button" onClick={() => navigate('/products')}>
-            <CaretLeft size={18} />
+      <AdminPageHeader
+        eyebrow="Commerce · Catalog"
+        title={isEditing ? 'Edit Product' : 'New Product'}
+        description={
+          isEditing
+            ? 'Update product details, dynamic specifications, rich media, and inventory status.'
+            : 'Create a new product with custom specifications, media gallery, and catalog controls.'
+        }
+        actions={
+          <>
+            <button
+              className="btn-secondary"
+              type="button"
+              onClick={() => navigate('/products')}
+            >
+              <ArrowLeft size={16} />
+              <span>Back to Products</span>
+            </button>
+            <button className="btn-primary product-editor-save" type="submit" disabled={saving}>
+              <FloppyDisk size={18} />
+              <span>{saving ? 'Saving...' : 'Save Product'}</span>
+            </button>
+          </>
+        }
+      />
+
+      {errorMessage && (
+        <div className="product-error-banner" role="alert">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <WarningCircle size={20} />
+            <span>{errorMessage}</span>
+          </div>
+          <button
+            type="button"
+            className="btn-secondary"
+            style={{ padding: '4px 8px', border: 'none', background: 'transparent' }}
+            onClick={() => setErrorMessage('')}
+          >
+            <X size={16} />
           </button>
-          <div>
-            <p className="settings-page-eyebrow">Catalog Editor</p>
-            <h2>{isEditing ? 'Edit Product' : 'Create Product'}</h2>
-            <p className="product-editor-subtitle">
-              Refine the product story, media, pricing, and launch state from one clean control surface.
-            </p>
+        </div>
+      )}
+
+      {successMessage && (
+        <div className="product-success-banner" role="status">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <CheckCircle size={20} />
+            <span>{successMessage}</span>
           </div>
         </div>
-
-        <button className="btn-primary product-editor-save" type="submit" disabled={saving}>
-          <FloppyDisk size={18} />
-          {saving ? 'Saving...' : 'Save Product'}
-        </button>
-      </div>
+      )}
 
       <div className="product-editor-summary">
-        <InfoPill icon={<Package size={16} />} label="Status" value={formData.is_live ? 'Live on store' : 'Draft'} />
-        <InfoPill icon={<Sparkle size={16} />} label="Images" value={`${images.length} uploaded`} />
-        <InfoPill icon={<Palette size={16} />} label="Features" value={`${featureCount} product highlights`} />
-        <InfoPill icon={<Eye size={16} />} label="Care Notes" value={`${careCount} care lines`} />
+        <InfoPill
+          icon={<Package size={18} />}
+          label="Status"
+          value={
+            <StatusBadge status={formData.is_live ? 'success' : 'neutral'}>
+              {formData.is_live ? 'Live on Store' : 'Draft'}
+            </StatusBadge>
+          }
+        />
+        <InfoPill icon={<Sparkle size={18} />} label="Gallery" value={`${images.length} images`} />
+        <InfoPill
+          icon={<Sliders size={18} />}
+          label="Specifications"
+          value={`${(formData.attributes || []).length} custom specs`}
+        />
+        <InfoPill
+          icon={<CurrencyInr size={18} />}
+          label="Inventory"
+          value={`${Number(formData.stock_quantity || 0)} units`}
+        />
       </div>
 
       <div className="product-editor-layout">
         <div className="product-editor-main">
+          {/* Section 1: General Information */}
           <section className="settings-panel product-editor-panel">
             <div className="settings-panel-header">
               <div>
-                <p className="settings-panel-eyebrow">Core Copy</p>
+                <p className="settings-panel-eyebrow">Identity</p>
                 <h3>General Information</h3>
-                <p>Set the main product identity customers see across the storefront.</p>
+                <p>Define the core product naming, messaging, and narrative shown to shoppers.</p>
               </div>
             </div>
             <div className="settings-panel-body product-editor-grid">
-              <Field label="Product Name">
+              <FormField label="Product Name" required hint="The primary display name shown across all surfaces.">
                 <input
                   type="text"
                   name="name"
@@ -410,8 +482,9 @@ const ProductForm = () => {
                   required
                   placeholder="e.g. The Singularitas"
                 />
-              </Field>
-              <Field label="Tagline">
+              </FormField>
+
+              <FormField label="Tagline" hint="A concise summary phrase highlighted on product cards and hero banners.">
                 <input
                   type="text"
                   name="tagline"
@@ -419,65 +492,94 @@ const ProductForm = () => {
                   onChange={handleChange}
                   placeholder="A sculptural statement for quiet interiors."
                 />
-              </Field>
-              <Field label="Short Summary" hint="Used in cards, lists, and compact product surfaces.">
+              </FormField>
+
+              <FormField label="Short Summary" hint="Used in catalog cards, search snippets, and compact listings.">
                 <textarea
                   name="summary"
                   value={formData.summary}
                   onChange={handleChange}
                   rows={3}
-                  placeholder="Write a tight premium summary for the product listing."
+                  placeholder="Write a tight, compelling summary for the product listing."
                 />
-              </Field>
-              <Field label="Story / Long Description" hint="Used as the richer narrative on the product page.">
+              </FormField>
+
+              <FormField label="Story / Long Description" hint="The comprehensive narrative displayed on the product detail page.">
                 <textarea
                   name="story"
                   value={formData.story}
                   onChange={handleChange}
                   rows={6}
-                  placeholder="Tell the full product story, material feel, and design intent."
+                  placeholder="Tell the full product story, craftsmanship, material feel, and design intent."
                 />
-              </Field>
+              </FormField>
             </div>
           </section>
 
+          {/* Section 2: Technical Specifications & Dynamic Attributes */}
           <section className="settings-panel product-editor-panel">
             <div className="settings-panel-header">
               <div>
                 <p className="settings-panel-eyebrow">Technical Details</p>
-                <h3>Specifications</h3>
-                <p>Keep the product page structured and easy for customers to evaluate.</p>
+                <h3>Specifications & Details</h3>
+                <p>Define dynamic specifications, key features, and maintenance guidance.</p>
               </div>
             </div>
-            <div className="settings-panel-body product-editor-grid product-editor-grid-half">
-              <div style={{ gridColumn: '1 / -1', display: 'grid', gap: '12px' }}>
-                <label className="field-label" style={{ fontWeight: 600 }}>Custom Specifications</label>
+            <div className="settings-panel-body product-editor-grid">
+              <div className="product-attr-builder">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <label className="admin-field-label" style={{ margin: 0, fontWeight: 600 }}>
+                    Custom Specifications
+                  </label>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.84rem' }}
+                    onClick={handleAddAttribute}
+                  >
+                    <Plus size={15} /> Add Specification
+                  </button>
+                </div>
+
+                {(formData.attributes || []).length > 0 && (
+                  <div className="product-attr-header">
+                    <span>Attribute Name</span>
+                    <span>Value</span>
+                    <span></span>
+                  </div>
+                )}
+
                 {(formData.attributes || []).length === 0 ? (
-                  <p style={{ color: 'var(--text-secondary, #888)', fontSize: '0.9rem', margin: 0 }}>
-                    No attributes added yet. Click below to add specifications like Dimensions, Weight, Materials, etc.
-                  </p>
+                  <div className="product-attr-empty">
+                    No custom specifications defined yet. Click "Add Specification" to add parameters like Dimensions, Weight, Materials, or Movement.
+                  </div>
                 ) : (
-                  <div style={{ display: 'grid', gap: '10px' }}>
+                  <div style={{ display: 'grid', gap: '8px' }}>
                     {(formData.attributes || []).map((attr, index) => (
-                      <div key={index} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '10px', alignItems: 'center' }}>
+                      <div key={index} className="product-attr-row">
                         <input
                           type="text"
-                          placeholder="Attribute name (e.g. Dimensions)"
+                          placeholder="e.g. Dimensions"
                           value={attr.key}
                           onChange={(e) => handleAttributeChange(index, 'key', e.target.value)}
                         />
                         <input
                           type="text"
-                          placeholder="Value (e.g. 46 cm)"
+                          placeholder="e.g. 46 cm"
                           value={attr.value}
                           onChange={(e) => handleAttributeChange(index, 'value', e.target.value)}
                         />
                         <button
                           type="button"
                           className="btn-secondary"
-                          style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          style={{
+                            padding: '8px',
+                            display: 'grid',
+                            placeItems: 'center',
+                            color: 'var(--admin-danger)',
+                          }}
                           onClick={() => handleRemoveAttribute(index)}
-                          title="Remove attribute"
+                          title="Remove specification"
                         >
                           <Trash size={16} />
                         </button>
@@ -485,39 +587,39 @@ const ProductForm = () => {
                     ))}
                   </div>
                 )}
-                <div>
-                  <button type="button" className="btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }} onClick={handleAddAttribute}>
-                    <Plus size={16} /> Add attribute
-                  </button>
-                </div>
               </div>
-              <Field label="Features" hint="One feature per line.">
-                <textarea
-                  name="features"
-                  value={formData.features}
-                  onChange={handleChange}
-                  rows={6}
-                  placeholder={'Silent sweep movement\nHand-oiled finish\nHeirloom-grade timber'}
-                />
-              </Field>
-              <Field label="Care Instructions" hint="One instruction per line.">
-                <textarea
-                  name="care_instructions"
-                  value={formData.care_instructions}
-                  onChange={handleChange}
-                  rows={6}
-                  placeholder={'Dust with a soft cloth\nAvoid direct sunlight\nKeep away from moisture'}
-                />
-              </Field>
+
+              <div className="product-editor-grid product-editor-grid-half" style={{ marginTop: '8px' }}>
+                <FormField label="Features" hint="One feature highlight per line.">
+                  <textarea
+                    name="features"
+                    value={formData.features}
+                    onChange={handleChange}
+                    rows={5}
+                    placeholder={'Silent sweep movement\nHand-oiled finish\nHeirloom-grade timber'}
+                  />
+                </FormField>
+
+                <FormField label="Care Instructions" hint="One maintenance note per line.">
+                  <textarea
+                    name="care_instructions"
+                    value={formData.care_instructions}
+                    onChange={handleChange}
+                    rows={5}
+                    placeholder={'Dust with a soft microfiber cloth\nAvoid direct prolonged sunlight\nKeep away from high humidity'}
+                  />
+                </FormField>
+              </div>
             </div>
           </section>
 
+          {/* Section 3: Media Gallery */}
           <section className="settings-panel product-editor-panel">
             <div className="settings-panel-header">
               <div>
-                <p className="settings-panel-eyebrow">Media</p>
-                <h3>Images</h3>
-                <p>The first image is treated as the hero image on the storefront.</p>
+                <p className="settings-panel-eyebrow">Visual Assets</p>
+                <h3>Product Imagery</h3>
+                <p>Upload photography for the product gallery. The first image serves as the storefront hero frame.</p>
               </div>
             </div>
             <div className="settings-panel-body">
@@ -525,56 +627,250 @@ const ProductForm = () => {
             </div>
           </section>
 
+          {/* Section 4: Video SEO & Rich Media */}
           <section className="settings-panel product-editor-panel">
             <div className="settings-panel-header">
               <div>
-                <p className="settings-panel-eyebrow">Video SEO</p>
+                <p className="settings-panel-eyebrow">Rich Media & SEO</p>
                 <h3>Video Metadata</h3>
-                <p>Attach a hosted product video and the metadata needed for schema, transcripts, and the video sitemap.</p>
+                <p>Attach product demonstration videos and structured metadata for search indexing and VideoObject schema.</p>
               </div>
             </div>
             <div className="settings-panel-body product-editor-grid">
-              <Field label="Direct Video URL" hint="Best for tracked HTML5 playback, for example an MP4 or WebM file on Cloudinary.">
-                <input type="url" name="video_url" value={formData.video_url} onChange={handleChange} placeholder="https://res.cloudinary.com/.../chronyx-core.mp4" />
-              </Field>
-              <Field label="Embed URL" hint="Optional YouTube or Vimeo player URL if you are not self-hosting the file.">
-                <input type="url" name="video_embed_url" value={formData.video_embed_url} onChange={handleChange} placeholder="https://www.youtube.com/watch?v=..." />
-              </Field>
-              <Field label="Video Title">
-                <input type="text" name="video_title" value={formData.video_title} onChange={handleChange} placeholder="The Chronyx Core design story" />
-              </Field>
-              <Field label="Thumbnail URL">
-                <input type="url" name="video_thumbnail_url" value={formData.video_thumbnail_url} onChange={handleChange} placeholder="https://cdn.chronyx.in/video-thumbnails/core.jpg" />
-              </Field>
-              <Field label="Video Description" hint="Used in the video sitemap and VideoObject schema.">
-                <textarea name="video_description" value={formData.video_description} onChange={handleChange} rows={5} placeholder="Describe what the viewer will learn and include the core search terms naturally." />
-              </Field>
-              <Field label="Transcript" hint="This appears on the product page for SEO and accessibility.">
-                <textarea name="video_transcript" value={formData.video_transcript} onChange={handleChange} rows={7} placeholder="Paste the cleaned transcript here." />
-              </Field>
-              <Field label="Duration (seconds)">
-                <input type="number" min="0" name="video_duration_seconds" value={formData.video_duration_seconds} onChange={handleChange} placeholder="92" />
-              </Field>
-              <Field label="Upload Date">
-                <input type="datetime-local" name="video_upload_date" value={formData.video_upload_date} onChange={handleChange} />
-              </Field>
-              <Field label="View Count">
-                <input type="number" min="0" name="video_view_count" value={formData.video_view_count} onChange={handleChange} placeholder="0" />
-              </Field>
-              <Field label="Subtitle File URL" hint="Public VTT URL for in-player captions, or SRT/VTT for download.">
-                <input type="url" name="video_srt_url" value={formData.video_srt_url} onChange={handleChange} placeholder="https://cdn.chronyx.in/captions/core-en.vtt" />
-              </Field>
+              <div className="product-editor-grid product-editor-grid-half">
+                <FormField label="Direct Video URL" hint="MP4/WebM file (e.g. Cloudinary, S3).">
+                  <input
+                    type="url"
+                    name="video_url"
+                    value={formData.video_url}
+                    onChange={handleChange}
+                    placeholder="https://cdn.example.com/videos/product-core.mp4"
+                  />
+                </FormField>
+
+                <FormField label="Embed URL" hint="YouTube or Vimeo player URL as alternative.">
+                  <input
+                    type="url"
+                    name="video_embed_url"
+                    value={formData.video_embed_url}
+                    onChange={handleChange}
+                    placeholder="https://www.youtube.com/watch?v=..."
+                  />
+                </FormField>
+              </div>
+
+              <div className="product-editor-grid product-editor-grid-half">
+                <FormField label="Video Title">
+                  <input
+                    type="text"
+                    name="video_title"
+                    value={formData.video_title}
+                    onChange={handleChange}
+                    placeholder="Product design and craftsmanship overview"
+                  />
+                </FormField>
+
+                <FormField label="Video Thumbnail URL">
+                  <input
+                    type="url"
+                    name="video_thumbnail_url"
+                    value={formData.video_thumbnail_url}
+                    onChange={handleChange}
+                    placeholder="https://cdn.example.com/thumbnails/video-poster.jpg"
+                  />
+                </FormField>
+              </div>
+
+              <FormField label="Video Description" hint="Used in video sitemaps and schema.org search engine cards.">
+                <textarea
+                  name="video_description"
+                  value={formData.video_description}
+                  onChange={handleChange}
+                  rows={3}
+                  placeholder="Describe what the viewer learns, highlighting key product attributes."
+                />
+              </FormField>
+
+              <FormField label="Video Transcript" hint="Full transcript for search indexing and accessibility.">
+                <textarea
+                  name="video_transcript"
+                  value={formData.video_transcript}
+                  onChange={handleChange}
+                  rows={4}
+                  placeholder="Paste video speech transcript here."
+                />
+              </FormField>
+
+              <div className="product-editor-grid product-editor-grid-half">
+                <FormField label="Duration (Seconds)">
+                  <input
+                    type="number"
+                    min="0"
+                    name="video_duration_seconds"
+                    value={formData.video_duration_seconds}
+                    onChange={handleChange}
+                    placeholder="92"
+                  />
+                </FormField>
+
+                <FormField label="Upload Date">
+                  <input
+                    type="datetime-local"
+                    name="video_upload_date"
+                    value={formData.video_upload_date}
+                    onChange={handleChange}
+                  />
+                </FormField>
+              </div>
+
+              <div className="product-editor-grid product-editor-grid-half">
+                <FormField label="View Count">
+                  <input
+                    type="number"
+                    min="0"
+                    name="video_view_count"
+                    value={formData.video_view_count}
+                    onChange={handleChange}
+                    placeholder="0"
+                  />
+                </FormField>
+
+                <FormField label="Subtitle File URL (.vtt / .srt)">
+                  <input
+                    type="url"
+                    name="video_srt_url"
+                    value={formData.video_srt_url}
+                    onChange={handleChange}
+                    placeholder="https://cdn.example.com/captions/subtitles-en.vtt"
+                  />
+                </FormField>
+              </div>
             </div>
           </section>
         </div>
 
         <aside className="product-editor-side">
+          {/* Section 5: Publishing & Visibility */}
+          <section className="settings-panel product-editor-panel">
+            <div className="settings-panel-header">
+              <div>
+                <p className="settings-panel-eyebrow">Status</p>
+                <h3>Publishing & Drops</h3>
+                <p>Manage customer availability and promotional drop timing.</p>
+              </div>
+            </div>
+            <div className="settings-panel-body" style={{ display: 'grid', gap: '16px' }}>
+              <ToggleSwitch
+                label={formData.is_live ? 'Published on Storefront' : 'Draft Only (Hidden)'}
+                description="When enabled, this product is indexed and purchasable by customers."
+                checked={formData.is_live}
+                onChange={(val) => setFormData((cur) => ({ ...cur, is_live: val }))}
+              />
+
+              <ToggleSwitch
+                label={formData.is_limited_drop ? 'Limited Drop Enabled' : 'Standard Release'}
+                description="Activates the countdown timer and limited availability framing."
+                checked={formData.is_limited_drop}
+                onChange={(val) => setFormData((cur) => ({ ...cur, is_limited_drop: val }))}
+              />
+
+              {formData.is_limited_drop && (
+                <div className="product-editor-drop-date">
+                  <FormField label="Drop Date & Time" hint="Controls the storefront drop countdown.">
+                    <input
+                      type="datetime-local"
+                      name="drop_date"
+                      value={formData.drop_date}
+                      onChange={handleChange}
+                    />
+                  </FormField>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* Section 6: Pricing & Inventory */}
+          <section className="settings-panel product-editor-panel">
+            <div className="settings-panel-header">
+              <div>
+                <p className="settings-panel-eyebrow">Commerce</p>
+                <h3>Pricing & Inventory</h3>
+                <p>Set unit pricing and monitor available stock counts.</p>
+              </div>
+            </div>
+            <div className="settings-panel-body product-editor-grid">
+              <FormField label={`Price (${adminConfig.localization?.currencyCode || 'INR'})`} required>
+                <input
+                  type="number"
+                  name="price"
+                  value={formData.price}
+                  onChange={handleChange}
+                  min="0"
+                  step="any"
+                  required
+                />
+              </FormField>
+
+              <FormField label="Stock Quantity" required hint="Total physical units available for order.">
+                <input
+                  type="number"
+                  name="stock_quantity"
+                  value={formData.stock_quantity}
+                  onChange={handleChange}
+                  min="0"
+                  required
+                />
+              </FormField>
+            </div>
+          </section>
+
+          {/* Section 7: Catalog Organization */}
+          <section className="settings-panel product-editor-panel">
+            <div className="settings-panel-header">
+              <div>
+                <p className="settings-panel-eyebrow">Taxonomy</p>
+                <h3>Organization</h3>
+                <p>Categorize and tag for storefront filters and search discoverability.</p>
+              </div>
+            </div>
+            <div className="settings-panel-body product-editor-grid">
+              <FormField label="Category" hint="Select a default or enter a custom category.">
+                <input
+                  type="text"
+                  list="category-suggestions"
+                  name="category"
+                  value={formData.category}
+                  onChange={handleChange}
+                  placeholder="e.g. Wall Clocks"
+                />
+                <datalist id="category-suggestions">
+                  <option value="Wall Clocks" />
+                  <option value="Desk Clocks" />
+                  <option value="Accessories" />
+                  <option value="Furniture" />
+                  <option value="Lighting" />
+                </datalist>
+              </FormField>
+
+              <FormField label="Tags" hint="Separate tags with commas.">
+                <input
+                  type="text"
+                  name="tags"
+                  value={formData.tags}
+                  onChange={handleChange}
+                  placeholder="minimalist, walnut, limited"
+                />
+              </FormField>
+            </div>
+          </section>
+
+          {/* Section 8: Live Preview Card */}
           <section className="settings-panel product-editor-panel product-preview-panel">
             <div className="settings-panel-header">
               <div>
-                <p className="settings-panel-eyebrow">Live Preview</p>
-                <h3>Hero Snapshot</h3>
-                <p>Quick visual check of how the product feels before saving.</p>
+                <p className="settings-panel-eyebrow">Preview</p>
+                <h3>Card Snapshot</h3>
+                <p>Real-time visual check of how the card appears on the storefront.</p>
               </div>
             </div>
             <div className="settings-panel-body">
@@ -582,31 +878,36 @@ const ProductForm = () => {
                 {previewImage ? (
                   <img src={previewImage} alt={formData.name || 'Product preview'} />
                 ) : (
-                  <div className="product-preview-empty">Upload a hero image to preview the product here.</div>
+                  <div className="product-preview-empty">
+                    <ImageIcon size={28} />
+                    <strong>No Hero Image</strong>
+                    <p>Upload an image above to preview the product card.</p>
+                  </div>
                 )}
               </div>
               <div className="product-preview-copy">
-                <p className="label">{formData.category || 'Category'}</p>
-                <h4>{formData.name || 'Product name preview'}</h4>
-                <p>{formData.tagline || 'Your product tagline will appear here once added.'}</p>
-                <strong>INR {Number(formData.price || 0).toLocaleString('en-IN')}</strong>
+                <p className="label">{formData.category || 'Uncategorized'}</p>
+                <h4>{formData.name || 'Untitled Product'}</h4>
+                <p>{formData.tagline || 'Add a tagline to preview here.'}</p>
+                <strong>{formatCurrency(formData.price || 0)}</strong>
               </div>
-              {visibleTags.length > 0 ? (
+              {visibleTags.length > 0 && (
                 <div className="product-preview-tags">
                   {visibleTags.map((tag) => (
                     <span key={tag}>{tag}</span>
                   ))}
                 </div>
-              ) : null}
+              )}
             </div>
           </section>
 
+          {/* Section 9: Authenticity Registry */}
           <section className="settings-panel product-editor-panel product-auth-panel">
             <div className="settings-panel-header">
               <div>
-                <p className="settings-panel-eyebrow">Authenticity</p>
-                <h3>Certificate Inventory</h3>
-                <p>Issue one certificate per physical unit, download QR labels, and verify each piece individually.</p>
+                <p className="settings-panel-eyebrow">Provenance</p>
+                <h3>Certificate Registry</h3>
+                <p>Issue one certificate per physical unit, download QR labels, and verify units.</p>
               </div>
             </div>
             <div className="settings-panel-body">
@@ -618,22 +919,22 @@ const ProductForm = () => {
                       <strong>{publicProductId}</strong>
                     </div>
                     <div className="product-auth-item">
-                      <small>Units issued</small>
+                      <small>Units Issued</small>
                       <strong>{issuedUnitCount}</strong>
                     </div>
                     <div className="product-auth-item">
-                      <small>Current stock target</small>
+                      <small>Stock Target</small>
                       <strong>{Number(formData.stock_quantity || 0)}</strong>
                     </div>
                     <div className="product-auth-item">
-                      <small>Missing certificates</small>
+                      <small>Missing Certs</small>
                       <strong>{missingUnitCount}</strong>
                     </div>
                   </div>
 
                   <div className="product-auth-toolbar">
                     <p>
-                      Save the product to auto-issue any missing certificates. Extra certificates are preserved even if stock later decreases so sold units remain verifiable.
+                      Save the product to auto-issue any missing certificates. Issued certificates are preserved even if stock later decreases so sold units remain verifiable.
                     </p>
                     <button
                       type="button"
@@ -642,15 +943,15 @@ const ProductForm = () => {
                       disabled={syncingUnits}
                     >
                       <PlusCircle size={18} />
-                      {syncingUnits ? 'Syncing Certificates...' : 'Generate Missing Certificates'}
+                      <span>{syncingUnits ? 'Syncing Certificates...' : 'Generate Missing Certificates'}</span>
                     </button>
                   </div>
 
-                  {authError ? (
+                  {authError && (
                     <div className="product-auth-empty">
-                      Authenticity registry unavailable. Run the SQL patch for `product_auth_units`, then refresh this editor. Current error: {authError}
+                      Authenticity registry note: {authError}
                     </div>
-                  ) : null}
+                  )}
 
                   {authUnits.length > 0 ? (
                     <div className="product-auth-unit-list">
@@ -683,8 +984,8 @@ const ProductForm = () => {
                                   onClick={() => downloadUnitQr(unit)}
                                   disabled={downloadingUnitId === unit.id}
                                 >
-                                  <DownloadSimple size={18} />
-                                  {downloadingUnitId === unit.id ? 'Downloading...' : 'Download QR'}
+                                  <DownloadSimple size={16} />
+                                  <span>{downloadingUnitId === unit.id ? 'Downloading...' : 'Download QR'}</span>
                                 </button>
                                 <a
                                   className="btn-secondary"
@@ -692,8 +993,8 @@ const ProductForm = () => {
                                   target="_blank"
                                   rel="noopener noreferrer"
                                 >
-                                  <ArrowSquareOut size={18} />
-                                  Open Verify Page
+                                  <ArrowSquareOut size={16} />
+                                  <span>Verify Page</span>
                                 </a>
                               </div>
                             </div>
@@ -703,123 +1004,45 @@ const ProductForm = () => {
                     </div>
                   ) : !authError ? (
                     <div className="product-auth-empty">
-                      No unit certificates have been issued yet. Save the product or generate the missing certificates to create QR-based authenticity records for each unit.
+                      No unit certificates issued yet. Save the product or generate missing certificates to create QR-based authenticity records.
                     </div>
                   ) : null}
                 </div>
               ) : (
                 <div className="product-auth-empty">
-                  Save the product once to create its model ID and issue one downloadable authenticity certificate per stock unit.
+                  Save this product first to generate its model ID and issue unit authenticity certificates.
                 </div>
               )}
             </div>
           </section>
-
-          <section className="settings-panel product-editor-panel">
-            <div className="settings-panel-header">
-              <div>
-                <p className="settings-panel-eyebrow">Commerce</p>
-                <h3>Pricing & Inventory</h3>
-                <p>Manage price, stock, and storefront visibility safely.</p>
-              </div>
-            </div>
-            <div className="settings-panel-body product-editor-grid">
-              <Field label="Price (INR)">
-                <input type="number" name="price" value={formData.price} onChange={handleChange} min="0" required />
-              </Field>
-              <Field label="Stock Quantity">
-                <input
-                  type="number"
-                  name="stock_quantity"
-                  value={formData.stock_quantity}
-                  onChange={handleChange}
-                  min="0"
-                  required
-                />
-              </Field>
-            </div>
-          </section>
-
-          <section className="settings-panel product-editor-panel">
-            <div className="settings-panel-header">
-              <div>
-                <p className="settings-panel-eyebrow">Catalog</p>
-                <h3>Organization</h3>
-                <p>Keep the product indexed correctly for discovery and filtering.</p>
-              </div>
-            </div>
-            <div className="settings-panel-body product-editor-grid">
-              <Field label="Category">
-                <select name="category" value={formData.category} onChange={handleChange}>
-                  <option value="Wall Clocks">Wall Clocks</option>
-                  <option value="Desk Clocks">Desk Clocks</option>
-                  <option value="Accessories">Accessories</option>
-                </select>
-              </Field>
-              <Field label="Tags" hint="Separate tags with commas.">
-                <input
-                  type="text"
-                  name="tags"
-                  value={formData.tags}
-                  onChange={handleChange}
-                  placeholder="minimalist, walnut, limited"
-                />
-              </Field>
-            </div>
-          </section>
-
-          <section className="settings-panel product-editor-panel">
-            <div className="settings-panel-header">
-              <div>
-                <p className="settings-panel-eyebrow">Launch State</p>
-                <h3>Visibility & Drops</h3>
-                <p>Control whether this product is live and whether it belongs to a limited drop.</p>
-              </div>
-            </div>
-            <div className="settings-panel-body">
-              <div className="settings-toggle-stack">
-                <label className="settings-toggle-row">
-                  <div className="settings-toggle-copy">
-                    <strong>{formData.is_live ? 'Live on storefront' : 'Draft only'}</strong>
-                    <small>Turn this on when the product should appear to customers.</small>
-                  </div>
-                  <div className="settings-toggle-control">
-                    <span className={`settings-toggle-state ${formData.is_live ? 'is-on' : 'is-off'}`}>
-                      {formData.is_live ? 'On' : 'Off'}
-                    </span>
-                    <input type="checkbox" name="is_live" checked={formData.is_live} onChange={handleChange} />
-                  </div>
-                </label>
-
-                <label className="settings-toggle-row">
-                  <div className="settings-toggle-copy">
-                    <strong>{formData.is_limited_drop ? 'Limited drop enabled' : 'Standard release'}</strong>
-                    <small>Use this to enable the countdown timer and drop framing on the product page.</small>
-                  </div>
-                  <div className="settings-toggle-control">
-                    <span className={`settings-toggle-state ${formData.is_limited_drop ? 'is-on' : 'is-off'}`}>
-                      {formData.is_limited_drop ? 'On' : 'Off'}
-                    </span>
-                    <input
-                      type="checkbox"
-                      name="is_limited_drop"
-                      checked={formData.is_limited_drop}
-                      onChange={handleChange}
-                    />
-                  </div>
-                </label>
-              </div>
-
-              {formData.is_limited_drop ? (
-                <div className="product-editor-drop-date">
-                  <Field label="Drop Date & Time" hint="This powers the product countdown timer.">
-                    <input type="datetime-local" name="drop_date" value={formData.drop_date} onChange={handleChange} />
-                  </Field>
-                </div>
-              ) : null}
-            </div>
-          </section>
         </aside>
+      </div>
+
+      {/* Sticky Action Footer */}
+      <div className="product-editor-footer-bar">
+        <div className="product-editor-footer-info">
+          <span>{isEditing ? `Editing: ${formData.name || 'Untitled Product'}` : 'Creating New Product'}</span>
+          <StatusBadge status={formData.is_live ? 'success' : 'neutral'}>
+            {formData.is_live ? 'Live' : 'Draft'}
+          </StatusBadge>
+        </div>
+        <div className="product-editor-footer-actions">
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => navigate('/products')}
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className="btn-primary"
+            disabled={saving}
+          >
+            <FloppyDisk size={18} />
+            <span>{saving ? 'Saving...' : 'Save Product'}</span>
+          </button>
+        </div>
       </div>
     </form>
   );

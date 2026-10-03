@@ -1,40 +1,45 @@
+import React from 'react';
 import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
+import { adminConfig } from '../../config/adminConfig';
 
 export const packingSlipStyles = StyleSheet.create({
   page: {
     padding: 40,
     fontFamily: 'Helvetica',
-    fontSize: 10,
+    fontSize: 9,
     color: '#000000',
+    backgroundColor: '#FFFFFF',
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 40,
+    alignItems: 'flex-start',
+    marginBottom: 30,
     borderBottomWidth: 1,
-    borderBottomStyle: 'dashed',
     borderBottomColor: '#000000',
     paddingBottom: 20,
   },
   brandName: {
-    fontSize: 16,
+    fontSize: 20,
     fontFamily: 'Helvetica-Bold',
+    letterSpacing: 2,
     marginBottom: 4,
   },
   subtitle: {
-    fontSize: 9,
-    color: '#333333',
+    fontSize: 8,
+    color: '#666666',
+    letterSpacing: 1,
   },
   orderTitle: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: 'Helvetica-Bold',
-    marginBottom: 4,
     textAlign: 'right',
+    marginBottom: 4,
   },
   orderMeta: {
-    fontSize: 9,
+    fontSize: 8,
+    color: '#666666',
     textAlign: 'right',
-    color: '#333333',
     lineHeight: 1.4,
   },
   addressRow: {
@@ -44,9 +49,10 @@ export const packingSlipStyles = StyleSheet.create({
   },
   addressBlock: {
     width: '45%',
-    borderWidth: 1,
-    borderColor: '#D4D4D4',
+    backgroundColor: '#FAFAFA',
     padding: 12,
+    borderWidth: 1,
+    borderColor: '#EEEEEE',
     borderRadius: 4,
   },
   sectionTitle: {
@@ -98,9 +104,9 @@ export const packingSlipStyles = StyleSheet.create({
     color: '#666666',
   },
   checklist: {
-    marginTop: 12,
-    flexDirection: 'column',
-    gap: 4,
+    flexDirection: 'row',
+    gap: 16,
+    marginTop: 8,
   },
   checklistItem: {
     flexDirection: 'row',
@@ -111,20 +117,22 @@ export const packingSlipStyles = StyleSheet.create({
     width: 10,
     height: 10,
     borderWidth: 1,
-    borderColor: '#000000',
+    borderColor: '#666666',
   },
   checklistText: {
-    fontSize: 9,
+    fontSize: 8,
+    color: '#666666',
   },
   totalRow: {
-    flexDirection: 'row',
     backgroundColor: '#FAFAFA',
+    borderTopWidth: 1,
+    borderTopColor: '#000000',
   },
   notesBox: {
+    backgroundColor: '#FAFAFA',
     borderWidth: 1,
-    borderColor: '#000000',
-    borderStyle: 'dashed',
-    padding: 16,
+    borderColor: '#EEEEEE',
+    padding: 12,
     borderRadius: 4,
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -161,37 +169,43 @@ function getPackingSlipData(order) {
     : 'N/A';
 
   const shortId = safeOrder.id ? safeOrder.id.slice(0, 8).toUpperCase() : 'XXXX';
-  const displayId = `CRX-${new Date().getFullYear()}-${shortId}`;
+  const displayId = `PKG-${new Date().getFullYear()}-${shortId}`;
   const address = safeOrder.shipping_address || {};
   const totalQty = items.reduce((acc, item) => acc + (item.quantity || 1), 0);
 
   return { safeOrder, items, dateStr, displayId, address, totalQty };
 }
 
-export function PackingSlipPage({ order }) {
+export function PackingSlipPage({ order, storeConfig = adminConfig }) {
   const { safeOrder, items, dateStr, displayId, address, totalQty } = getPackingSlipData(order);
+
+  const brandName = storeConfig?.storeName || adminConfig.storeName;
+  const brandTagline = storeConfig?.tagline || adminConfig.tagline;
+  const supportEmail = storeConfig?.contact?.supportEmail || storeConfig?.contact?.email || adminConfig.contact.email;
+  const contactPhone = storeConfig?.contact?.phone || adminConfig.contact.phone;
+  const storeAddress = storeConfig?.contact?.address?.formatted || adminConfig.contact.address.formatted;
+  const storeDomain = storeConfig?.storefrontUrl || adminConfig.storefrontUrl;
 
   return (
     <Page size="A4" style={packingSlipStyles.page}>
       <View style={packingSlipStyles.headerRow}>
         <View>
           <Text style={packingSlipStyles.brandName}>PACKING SLIP</Text>
-          <Text style={packingSlipStyles.subtitle}>CHRONYX - Handcrafted Wooden Timepieces</Text>
+          <Text style={packingSlipStyles.subtitle}>{brandName} — {brandTagline}</Text>
         </View>
         <View>
           <Text style={packingSlipStyles.orderTitle}>Order #{displayId}</Text>
           <Text style={packingSlipStyles.orderMeta}>{dateStr}</Text>
-          <Text style={packingSlipStyles.orderMeta}>Courier: Pending - Tracking: Pending</Text>
+          <Text style={packingSlipStyles.orderMeta}>Status: Dispatched / Ready for Courier</Text>
         </View>
       </View>
 
       <View style={packingSlipStyles.addressRow}>
         <View style={packingSlipStyles.addressBlock}>
           <Text style={packingSlipStyles.sectionTitle}>SHIP FROM</Text>
-          <Text style={packingSlipStyles.boldText}>CHRONYX</Text>
-          <Text style={packingSlipStyles.textLine}>kottekattil (h), elambulassery (po)</Text>
-          <Text style={packingSlipStyles.textLine}>elambulassery, Kerala - 678595</Text>
-          <Text style={packingSlipStyles.textLine}>India</Text>
+          <Text style={packingSlipStyles.boldText}>{brandName}</Text>
+          <Text style={packingSlipStyles.textLine}>{storeAddress}</Text>
+          {contactPhone ? <Text style={packingSlipStyles.textLine}>Contact: {contactPhone}</Text> : null}
         </View>
         <View style={packingSlipStyles.addressBlock}>
           <Text style={packingSlipStyles.sectionTitle}>SHIP TO</Text>
@@ -214,19 +228,21 @@ export function PackingSlipPage({ order }) {
         </View>
 
         {items.map((item, index) => {
-          const isWalnut = item.name?.toLowerCase().includes('walnut');
-          const sku = `CRX-${isWalnut ? 'WN' : 'TK'}-00${index + 1}`;
+          const sku = item.sku || `SKU-${String(index + 1).padStart(4, '0')}`;
 
           return (
             <View key={`${item.name || 'item'}-${index}`} style={packingSlipStyles.tableRow}>
               <View style={packingSlipStyles.colItem}>
                 <Text style={packingSlipStyles.itemName}>{item.name}</Text>
+                {item.tagline || item.description ? (
+                  <Text style={packingSlipStyles.itemDesc}>{item.tagline || item.description}</Text>
+                ) : null}
               </View>
               <View style={[packingSlipStyles.colSku, { justifyContent: 'center' }]}>
                 <Text>{sku}</Text>
               </View>
               <View style={[packingSlipStyles.colQty, { justifyContent: 'center' }]}>
-                <Text>{item.quantity}</Text>
+                <Text>{item.quantity || 1}</Text>
               </View>
             </View>
           );
@@ -245,22 +261,22 @@ export function PackingSlipPage({ order }) {
 
       <View style={packingSlipStyles.notesBox}>
         <View style={packingSlipStyles.notesText}>
-          <Text style={packingSlipStyles.sectionTitle}>PACKING NOTES</Text>
+          <Text style={packingSlipStyles.sectionTitle}>PACKING NOTES &amp; QUALITY INSPECTION</Text>
           <Text>
-            Fragile handcrafted item. Wrap individually in bubble wrap. Store upright at all times. Avoid stacking or applying pressure. Keep away from moisture and direct sunlight during transit.
+            Carefully packaged item. Wrap with protective cushioning. Ensure package is sealed securely against moisture during transit.
           </Text>
           <View style={packingSlipStyles.checklist}>
             <View style={packingSlipStyles.checklistItem}>
               <View style={packingSlipStyles.checklistBox} />
-              <Text style={packingSlipStyles.checklistText}>Verify item before sealing</Text>
+              <Text style={packingSlipStyles.checklistText}>Item verified</Text>
             </View>
             <View style={packingSlipStyles.checklistItem}>
               <View style={packingSlipStyles.checklistBox} />
-              <Text style={packingSlipStyles.checklistText}>Ensure proper cushioning</Text>
+              <Text style={packingSlipStyles.checklistText}>Cushioning confirmed</Text>
             </View>
             <View style={packingSlipStyles.checklistItem}>
               <View style={packingSlipStyles.checklistBox} />
-              <Text style={packingSlipStyles.checklistText}>Seal package securely</Text>
+              <Text style={packingSlipStyles.checklistText}>Securely sealed</Text>
             </View>
           </View>
         </View>
@@ -269,27 +285,29 @@ export function PackingSlipPage({ order }) {
             src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${displayId}`} 
             style={{ width: 40, height: 40, marginBottom: 4 }} 
           />
-          <Text style={{ fontSize: 7, color: '#666666', letterSpacing: 1 }}>SCAN TO VERIFY</Text>
+          <Text style={{ fontSize: 7, color: '#666666', letterSpacing: 1 }}>ORDER CODE</Text>
         </View>
       </View>
 
       <View style={packingSlipStyles.footer}>
         <View>
-          <Text style={{ fontFamily: 'Helvetica-Bold', marginBottom: 4 }}>CHRONYX</Text>
-          <Text style={packingSlipStyles.footerText}>Time, carved from wood.</Text>
+          <Text style={{ fontFamily: 'Helvetica-Bold', marginBottom: 4 }}>{brandName}</Text>
+          <Text style={packingSlipStyles.footerText}>{brandTagline}</Text>
         </View>
         <View>
-          <Text style={[packingSlipStyles.footerText, { textAlign: 'right', marginBottom: 4 }]}>chronyxbrand@gmail.com | +91 9562122618</Text>
-          <Text style={[packingSlipStyles.footerText, { textAlign: 'right' }]}>https://chronyx.in | @chronyx.ck</Text>
+          <Text style={[packingSlipStyles.footerText, { textAlign: 'right', marginBottom: 4 }]}>
+            {supportEmail} {contactPhone ? `| ${contactPhone}` : ''}
+          </Text>
+          <Text style={[packingSlipStyles.footerText, { textAlign: 'right' }]}>{storeDomain}</Text>
         </View>
       </View>
     </Page>
   );
 }
 
-const PackingSlipPDF = ({ order }) => (
+const PackingSlipPDF = ({ order, storeConfig = adminConfig }) => (
   <Document>
-    <PackingSlipPage order={order} />
+    <PackingSlipPage order={order} storeConfig={storeConfig} />
   </Document>
 );
 

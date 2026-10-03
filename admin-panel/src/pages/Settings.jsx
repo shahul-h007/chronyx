@@ -1,6 +1,22 @@
 import { useEffect, useMemo, useState } from 'react';
-import { FloppyDisk } from '@phosphor-icons/react';
+import {
+  FloppyDisk,
+  Storefront,
+  CreditCard,
+  Truck,
+  BookOpen,
+  CheckCircle,
+  WarningCircle,
+  X,
+  Warning,
+} from '@phosphor-icons/react';
 import { supabase } from '../lib/supabase';
+
+import AdminPageHeader from '../components/common/AdminPageHeader';
+import StatCard from '../components/common/StatCard';
+import ToggleSwitch from '../components/common/ToggleSwitch';
+import FormField from '../components/common/FormField';
+import { formatCurrency } from '../config/adminConfig';
 
 const defaultSettings = {
   maintenance_mode: false,
@@ -18,73 +34,34 @@ const defaultSettings = {
   show_journal: false,
 };
 
-const paymentFields = [
+const paymentMethods = [
   {
-    name: 'upi_enabled',
-    title: 'UPI',
-    body: 'Fast mobile-first checkout for most customers.',
+    key: 'upi_enabled',
+    label: 'UPI Payments (GPay, PhonePe, Paytm)',
+    description: 'Instant zero-friction mobile checkout for customers.',
   },
   {
-    name: 'card_enabled',
-    title: 'Cards',
-    body: 'Keeps debit and credit card payment visible.',
+    key: 'card_enabled',
+    label: 'Debit & Credit Cards (Visa, Mastercard, RuPay)',
+    description: 'Accept standard domestic and international cards.',
   },
   {
-    name: 'netbanking_enabled',
-    title: 'Net banking',
-    body: 'Supports customers who prefer direct bank payment.',
+    key: 'netbanking_enabled',
+    label: 'Net Banking (Direct Bank Transfer)',
+    description: 'Permit direct payment via major banking institutions.',
+  },
+  {
+    key: 'cod_enabled',
+    label: 'Cash on Delivery (COD)',
+    description: 'Enable customers to pay upon package receipt.',
   },
 ];
-
-function SettingsPanel({ eyebrow, title, body, children }) {
-  return (
-    <section className="settings-panel">
-      <div className="settings-panel-header">
-        <p className="settings-panel-eyebrow">{eyebrow}</p>
-        <h3>{title}</h3>
-        <p>{body}</p>
-      </div>
-      <div className="settings-panel-body">{children}</div>
-    </section>
-  );
-}
-
-function SettingsLabel({ children }) {
-  return <label className="settings-label">{children}</label>;
-}
-
-function SettingsHint({ children }) {
-  return <p className="settings-hint">{children}</p>;
-}
-
-function ToggleRow({ name, checked, onChange, title, body, danger = false }) {
-  return (
-    <label className={`settings-toggle-row ${danger ? 'is-danger' : ''}`}>
-      <div className="settings-toggle-copy">
-        <strong>{title}</strong>
-        {body ? <small>{body}</small> : null}
-      </div>
-      <div className="settings-toggle-control">
-        <span className={`settings-toggle-state ${checked ? 'is-on' : 'is-off'}`}>{checked ? 'On' : 'Off'}</span>
-        <input className="admin-toggle-input" type="checkbox" name={name} checked={checked} onChange={onChange} />
-      </div>
-    </label>
-  );
-}
-
-function SummaryChip({ label, value }) {
-  return (
-    <div className="settings-summary-chip">
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
-  );
-}
 
 const Settings = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState(defaultSettings);
+  const [feedback, setFeedback] = useState(null);
 
   useEffect(() => {
     fetchSettings();
@@ -101,12 +78,13 @@ const Settings = () => {
       }
     } catch (error) {
       console.error('Error fetching settings:', error.message);
+      setFeedback({ type: 'error', message: `Failed to load settings: ${error.message}` });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleChange = (event) => {
+  const handleFieldChange = (event) => {
     const { name, value, type, checked } = event.target;
     setSettings((prev) => ({
       ...prev,
@@ -114,14 +92,30 @@ const Settings = () => {
     }));
   };
 
+  const handleToggle = (key, value) => {
+    setSettings((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+  };
+
   const handleSave = async () => {
     setSaving(true);
+    setFeedback(null);
     try {
-      const { error } = await supabase.from('settings').upsert({ key: 'store_settings', value: settings });
+      const { error } = await supabase.from('settings').upsert({
+        key: 'store_settings',
+        value: {
+          ...settings,
+          cod_fee: Number(settings.cod_fee || 0),
+          free_shipping_threshold: Number(settings.free_shipping_threshold || 0),
+          express_shipping_fee: Number(settings.express_shipping_fee || 0),
+        },
+      });
       if (error) throw error;
-      alert('Global settings saved successfully!');
+      setFeedback({ type: 'success', message: 'Store settings saved successfully.' });
     } catch (error) {
-      alert(`Error saving settings: ${error.message}`);
+      setFeedback({ type: 'error', message: `Error saving settings: ${error.message}` });
     } finally {
       setSaving(false);
     }
@@ -131,168 +125,343 @@ const Settings = () => {
     () =>
       [settings.upi_enabled, settings.card_enabled, settings.netbanking_enabled, settings.cod_enabled].filter(Boolean)
         .length,
-    [settings],
+    [settings]
   );
 
-  if (loading) return <div>Loading settings...</div>;
+  if (loading) {
+    return (
+      <div className="admin-page-container">
+        <AdminPageHeader
+          eyebrow="Configuration"
+          title="Settings"
+          description="Manage store identity, delivery rules, payment options, and feature availability."
+        />
+        <div style={{ padding: '60px 0', textAlign: 'center', color: 'var(--admin-text-muted)' }}>
+          Loading store settings...
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="settings-page settings-redesign">
-      <div className="page-header settings-header">
-        <div>
-          <p className="settings-page-eyebrow">Store Controls</p>
-          <h2>Settings</h2>
-          <p className="cms-page-subtitle">
-            Manage the storefront rules, contact details, payment visibility, and delivery controls from one place.
-          </p>
-        </div>
-        <button className="btn-primary settings-save-btn" onClick={handleSave} disabled={saving}>
-          <FloppyDisk size={16} />
-          {saving ? 'Saving...' : 'Save Changes'}
-        </button>
-      </div>
-
-      <div className="settings-summary-row">
-        <SummaryChip label="Store" value={settings.maintenance_mode ? 'Paused' : 'Live'} />
-        <SummaryChip label="Payments" value={`${enabledPayments} enabled`} />
-        <SummaryChip
-          label="Free Shipping"
-          value={`INR ${Number(settings.free_shipping_threshold || 0).toLocaleString('en-IN')}`}
-        />
-        <SummaryChip
-          label="Journal"
-          value={settings.show_journal ? 'Visible' : 'Hidden'}
-        />
-      </div>
-
-      <div className="settings-layout">
-        <div className="settings-column">
-          <SettingsPanel
-            eyebrow="Brand"
-            title="Store identity"
-            body="Business details used across support, branding, and customer communication."
+    <div className="admin-page-container" style={{ display: 'grid', gap: '24px' }}>
+      <AdminPageHeader
+        eyebrow="Configuration"
+        title="Settings"
+        description="Manage store identity, delivery pricing rules, checkout payment methods, and storefront feature availability."
+        actions={
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={handleSave}
+            disabled={saving}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
           >
-            <div className="settings-form-grid">
-              <div>
-                <SettingsLabel>Store Name</SettingsLabel>
-                <input type="text" name="store_name" value={settings.store_name} onChange={handleChange} />
-              </div>
+            <FloppyDisk size={16} />
+            <span>{saving ? 'Saving...' : 'Save Settings'}</span>
+          </button>
+        }
+      />
 
-              <div className="settings-two-col">
-                <div>
-                  <SettingsLabel>Support Email</SettingsLabel>
-                  <input type="email" name="contact_email" value={settings.contact_email} onChange={handleChange} />
-                </div>
-                <div>
-                  <SettingsLabel>WhatsApp Number</SettingsLabel>
+      {feedback && (
+        <div
+          role="status"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '12px 16px',
+            borderRadius: 'var(--admin-radius-md, 8px)',
+            fontSize: '0.9rem',
+            background: feedback.type === 'error' ? 'var(--admin-danger-subtle)' : 'var(--admin-success-subtle)',
+            color: feedback.type === 'error' ? 'var(--admin-danger)' : 'var(--admin-success)',
+            border: `1px solid ${feedback.type === 'error' ? 'var(--admin-danger)' : 'var(--admin-success)'}`,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {feedback.type === 'error' ? <WarningCircle size={18} /> : <CheckCircle size={18} />}
+            <span>{feedback.message}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setFeedback(null)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: '4px' }}
+            aria-label="Dismiss notification"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
+      {settings.maintenance_mode && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            padding: '14px 18px',
+            borderRadius: 'var(--admin-radius-md, 8px)',
+            background: 'var(--admin-danger-subtle)',
+            border: '1px solid var(--admin-danger)',
+            color: 'var(--admin-danger)',
+            fontSize: '0.88rem',
+            fontWeight: 500,
+          }}
+        >
+          <Warning size={20} weight="bold" />
+          <div>
+            <strong>Maintenance Mode is Active:</strong> The customer-facing storefront is currently paused and displays a temporary maintenance screen.
+          </div>
+        </div>
+      )}
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+        <StatCard
+          label="Storefront Status"
+          value={settings.maintenance_mode ? 'Paused' : 'Active Live'}
+          description={settings.maintenance_mode ? 'Maintenance mode on' : 'Open to all visitors'}
+          icon={Storefront}
+          tone={settings.maintenance_mode ? 'danger' : 'success'}
+        />
+        <StatCard
+          label="Payment Methods"
+          value={`${enabledPayments} / 4`}
+          description="Enabled checkout gateways"
+          icon={CreditCard}
+          tone={enabledPayments > 0 ? 'neutral' : 'warning'}
+        />
+        <StatCard
+          label="Free Delivery"
+          value={formatCurrency(Number(settings.free_shipping_threshold || 0))}
+          description="Order qualification threshold"
+          icon={Truck}
+          tone="neutral"
+        />
+        <StatCard
+          label="Journal Feature"
+          value={settings.show_journal ? 'Available' : 'Disabled'}
+          description="Master blog toggle"
+          icon={BookOpen}
+          tone={settings.show_journal ? 'info' : 'neutral'}
+        />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '24px', alignItems: 'start' }}>
+        {/* COLUMN 1 */}
+        <div style={{ display: 'grid', gap: '24px' }}>
+          {/* STORE IDENTITY */}
+          <section className="card" style={{ padding: '24px' }}>
+            <div style={{ paddingBottom: '16px', borderBottom: '1px solid var(--admin-border)', marginBottom: '18px' }}>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 600, margin: '0 0 4px', color: 'var(--admin-text)' }}>
+                Store Identity &amp; Contact
+              </h3>
+              <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--admin-text-muted)' }}>
+                Brand details used in transactional emails, order documents, and support channels.
+              </p>
+            </div>
+
+            <div style={{ display: 'grid', gap: '16px' }}>
+              <FormField label="Store / Brand Name" required id="st-name">
+                <input
+                  id="st-name"
+                  type="text"
+                  name="store_name"
+                  value={settings.store_name}
+                  onChange={handleFieldChange}
+                  placeholder="e.g. Acme Studio"
+                />
+              </FormField>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
+                <FormField label="Customer Support Email" required id="st-email">
                   <input
+                    id="st-email"
+                    type="email"
+                    name="contact_email"
+                    value={settings.contact_email}
+                    onChange={handleFieldChange}
+                    placeholder="support@yourstore.com"
+                  />
+                </FormField>
+
+                <FormField label="WhatsApp Support Number" hint="With country code, no symbols" id="st-wa">
+                  <input
+                    id="st-wa"
                     type="text"
                     name="whatsapp_number"
                     value={settings.whatsapp_number}
-                    onChange={handleChange}
-                    placeholder="e.g. 919876543210"
+                    onChange={handleFieldChange}
+                    placeholder="919876543210"
                   />
-                </div>
+                </FormField>
               </div>
             </div>
-          </SettingsPanel>
+          </section>
 
-          <SettingsPanel
-            eyebrow="Shipping"
-            title="Delivery pricing"
-            body="Control thresholds and optional delivery fees shown during checkout."
-          >
-            <div className="settings-form-grid">
-              <div>
-                <SettingsLabel>Free Shipping Threshold (INR)</SettingsLabel>
+          {/* SHIPPING & DELIVERY PRICING */}
+          <section className="card" style={{ padding: '24px' }}>
+            <div style={{ paddingBottom: '16px', borderBottom: '1px solid var(--admin-border)', marginBottom: '18px' }}>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 600, margin: '0 0 4px', color: 'var(--admin-text)' }}>
+                Delivery Pricing &amp; Thresholds
+              </h3>
+              <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--admin-text-muted)' }}>
+                Control shipping rates, COD fees, and free delivery thresholds calculated at checkout.
+              </p>
+            </div>
+
+            <div style={{ display: 'grid', gap: '16px' }}>
+              <FormField
+                label="Free Standard Shipping Threshold (INR)"
+                hint="Orders totaling at or above this amount automatically receive complimentary delivery."
+                id="st-free-ship"
+              >
                 <input
+                  id="st-free-ship"
                   type="number"
+                  min="0"
                   name="free_shipping_threshold"
                   value={settings.free_shipping_threshold}
-                  onChange={handleChange}
+                  onChange={handleFieldChange}
                 />
-                <SettingsHint>Orders above this amount qualify for free standard shipping.</SettingsHint>
-              </div>
+              </FormField>
 
-              {settings.express_shipping_enabled ? (
-                <div className="settings-inline-panel">
-                  <SettingsLabel>Express Shipping Fee (INR)</SettingsLabel>
+              {settings.express_shipping_enabled && (
+                <FormField
+                  label="Express Shipping Fee (INR)"
+                  hint="Additional surcharge applied when customer selects priority express delivery."
+                  id="st-exp-fee"
+                >
                   <input
+                    id="st-exp-fee"
                     type="number"
+                    min="0"
                     name="express_shipping_fee"
                     value={settings.express_shipping_fee}
-                    onChange={handleChange}
+                    onChange={handleFieldChange}
                   />
-                </div>
-              ) : null}
+                </FormField>
+              )}
 
-              {settings.cod_enabled ? (
-                <div className="settings-inline-panel">
-                  <SettingsLabel>COD Handling Fee (INR)</SettingsLabel>
-                  <input type="number" name="cod_fee" value={settings.cod_fee} onChange={handleChange} />
-                </div>
-              ) : null}
+              {settings.cod_enabled && (
+                <FormField
+                  label="COD Handling Fee (INR)"
+                  hint="Fixed convenience fee added to Cash on Delivery orders."
+                  id="st-cod-fee"
+                >
+                  <input
+                    id="st-cod-fee"
+                    type="number"
+                    min="0"
+                    name="cod_fee"
+                    value={settings.cod_fee}
+                    onChange={handleFieldChange}
+                  />
+                </FormField>
+              )}
             </div>
-          </SettingsPanel>
+          </section>
         </div>
 
-        <div className="settings-column">
-          <SettingsPanel
-            eyebrow="Storefront"
-            title="Operational switches"
-            body="Toggle customer-facing delivery and storefront availability states."
-          >
-            <div className="settings-toggle-stack">
-              <ToggleRow
-                name="express_shipping_enabled"
-                checked={settings.express_shipping_enabled}
-                onChange={handleChange}
-                title="Express shipping"
-                body="Shows a faster premium delivery option during checkout."
-              />
-              <ToggleRow
-                name="cod_enabled"
-                checked={settings.cod_enabled}
-                onChange={handleChange}
-                title="Cash on Delivery"
-                body="Keeps COD visible as an available checkout method."
-              />
-              <ToggleRow
-                name="maintenance_mode"
-                checked={settings.maintenance_mode}
-                onChange={handleChange}
-                title="Maintenance mode"
-                body="Use only when you intentionally want to pause storefront access."
-                danger
-              />
-              <ToggleRow
-                name="show_journal"
-                checked={settings.show_journal}
-                onChange={handleChange}
-                title="Show Journal on storefront"
-                body="Controls whether customers can see the Journal tab, footer link, and article pages."
-              />
+        {/* COLUMN 2 */}
+        <div style={{ display: 'grid', gap: '24px' }}>
+          {/* OPERATIONAL SWITCHES */}
+          <section className="card" style={{ padding: '24px' }}>
+            <div style={{ paddingBottom: '16px', borderBottom: '1px solid var(--admin-border)', marginBottom: '18px' }}>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 600, margin: '0 0 4px', color: 'var(--admin-text)' }}>
+                Operational &amp; Feature Availability
+              </h3>
+              <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--admin-text-muted)' }}>
+                Toggle major storefront features, delivery modes, and maintenance status.
+              </p>
             </div>
-          </SettingsPanel>
 
-          <SettingsPanel
-            eyebrow="Payments"
-            title="Accepted payment methods"
-            body="These toggles control which payment choices customers see during checkout."
-          >
-            <div className="settings-toggle-stack">
-              {paymentFields.map((item) => (
-                <ToggleRow
-                  key={item.name}
-                  name={item.name}
-                  checked={settings[item.name]}
-                  onChange={handleChange}
-                  title={item.title}
-                  body={item.body}
+            <div style={{ display: 'grid', gap: '16px' }}>
+              <div
+                style={{
+                  padding: '14px 16px',
+                  borderRadius: 'var(--admin-radius-md, 8px)',
+                  background: 'var(--admin-surface-hover)',
+                  border: '1px solid var(--admin-border)',
+                }}
+              >
+                <ToggleSwitch
+                  id="toggle-express-ship"
+                  checked={settings.express_shipping_enabled}
+                  onChange={(val) => handleToggle('express_shipping_enabled', val)}
+                  label="Offer Express Shipping"
+                  description="Displays an expedited shipping method choice during checkout."
                 />
+              </div>
+
+              <div
+                style={{
+                  padding: '14px 16px',
+                  borderRadius: 'var(--admin-radius-md, 8px)',
+                  background: 'var(--admin-surface-hover)',
+                  border: '1px solid var(--admin-border)',
+                }}
+              >
+                <ToggleSwitch
+                  id="toggle-journal-master"
+                  checked={settings.show_journal}
+                  onChange={(val) => handleToggle('show_journal', val)}
+                  label="Enable Storefront Journal Feature"
+                  description="Master switch controlling whether the /blog and /journal routes and default links are accessible."
+                />
+              </div>
+
+              <div
+                style={{
+                  padding: '14px 16px',
+                  borderRadius: 'var(--admin-radius-md, 8px)',
+                  background: settings.maintenance_mode ? 'var(--admin-danger-subtle)' : 'var(--admin-surface-hover)',
+                  border: `1px solid ${settings.maintenance_mode ? 'var(--admin-danger)' : 'var(--admin-border)'}`,
+                }}
+              >
+                <ToggleSwitch
+                  id="toggle-maintenance"
+                  checked={settings.maintenance_mode}
+                  onChange={(val) => handleToggle('maintenance_mode', val)}
+                  label="Maintenance Mode"
+                  description="Pause storefront access for regular visitors while maintenance or catalog overhaul is performed."
+                />
+              </div>
+            </div>
+          </section>
+
+          {/* CHECKOUT PAYMENT METHODS */}
+          <section className="card" style={{ padding: '24px' }}>
+            <div style={{ paddingBottom: '16px', borderBottom: '1px solid var(--admin-border)', marginBottom: '18px' }}>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 600, margin: '0 0 4px', color: 'var(--admin-text)' }}>
+                Accepted Payment Methods
+              </h3>
+              <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--admin-text-muted)' }}>
+                Toggle which payment choices customers see when completing their purchase.
+              </p>
+            </div>
+
+            <div style={{ display: 'grid', gap: '14px' }}>
+              {paymentMethods.map((pm) => (
+                <div
+                  key={pm.key}
+                  style={{
+                    padding: '12px 14px',
+                    borderRadius: 'var(--admin-radius-md, 8px)',
+                    background: 'var(--admin-surface-hover)',
+                    border: '1px solid var(--admin-border)',
+                  }}
+                >
+                  <ToggleSwitch
+                    id={`toggle-${pm.key}`}
+                    checked={Boolean(settings[pm.key])}
+                    onChange={(val) => handleToggle(pm.key, val)}
+                    label={pm.label}
+                    description={pm.description}
+                  />
+                </div>
               ))}
             </div>
-          </SettingsPanel>
+          </section>
         </div>
       </div>
     </div>

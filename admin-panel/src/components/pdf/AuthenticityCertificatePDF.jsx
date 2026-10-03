@@ -1,5 +1,6 @@
 import { Document, Image, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
 import { buildUnitQrCodeUrl } from '../../lib/productIdentity';
+import { adminConfig } from '../../config/adminConfig';
 
 const styles = StyleSheet.create({
   page: {
@@ -100,25 +101,27 @@ const styles = StyleSheet.create({
   },
 });
 
-function CertificatePage({ order, productMap, unit }) {
+function CertificatePage({ order, productMap, unit, storeConfig = adminConfig }) {
   const product = productMap.get(unit.product_id);
   const qrUrl = buildUnitQrCodeUrl(unit);
+  const brandName = storeConfig?.storeName || adminConfig.storeName;
+  const domain = storeConfig?.storefrontUrl || adminConfig.storefrontUrl;
 
   return (
     <Page size="A4" style={styles.page}>
       <View style={styles.frame}>
         <View style={styles.header}>
-          <Text style={styles.eyebrow}>CHRONYX REGISTERED AUTHENTICITY</Text>
-          <Text style={styles.brand}>CHRONYX</Text>
+          <Text style={styles.eyebrow}>{brandName.toUpperCase()} REGISTERED AUTHENTICITY</Text>
+          <Text style={styles.brand}>{brandName}</Text>
           <Text style={styles.title}>Certificate of Authenticity</Text>
           <Text style={styles.subtitle}>
-            This certificate confirms that the physical unit listed below is part of the official
-            CHRONYX registry and was issued for a genuine product release.
+            This certificate confirms that the physical unit listed below is part of the official{' '}
+            {brandName} registry and was issued for a genuine product release.
           </Text>
         </View>
 
         <View style={styles.productBlock}>
-          <Text style={styles.productName}>{product?.name || 'CHRONYX Registered Unit'}</Text>
+          <Text style={styles.productName}>{product?.name || `${brandName} Registered Unit`}</Text>
           <View style={styles.unitMetaRow}>
             <View style={styles.unitMetaCard}>
               <Text style={styles.metaLabel}>UNIT ID</Text>
@@ -137,7 +140,7 @@ function CertificatePage({ order, productMap, unit }) {
 
         <View style={styles.qrWrap}>
           <Image style={styles.qrImage} src={qrUrl} />
-          <Text style={styles.qrCaption}>Scan to verify this exact registered unit on chronyx.in</Text>
+          <Text style={styles.qrCaption}>Scan to verify this exact registered unit online at {domain.replace(/^https?:\/\//, '')}</Text>
         </View>
 
         <View style={styles.footer}>
@@ -145,7 +148,7 @@ function CertificatePage({ order, productMap, unit }) {
             Issued to {order.customer_name || 'Customer'} for order {order.id?.slice(0, 8).toUpperCase()}.
           </Text>
           <Text style={styles.footerText}>
-            Each CHRONYX unit carries its own unique certificate and should verify individually.
+            Each unit carries its own unique certificate and can be independently verified.
           </Text>
         </View>
       </View>
@@ -153,7 +156,7 @@ function CertificatePage({ order, productMap, unit }) {
   );
 }
 
-const AuthenticityCertificatePDF = ({ order, units = [], products = [] }) => {
+const AuthenticityCertificatePDF = ({ order, units = [], products = [], storeConfig = adminConfig }) => {
   const productMap = new Map(products.map((product) => [product.id, product]));
 
   return (
@@ -164,6 +167,7 @@ const AuthenticityCertificatePDF = ({ order, units = [], products = [] }) => {
           order={order}
           productMap={productMap}
           unit={unit}
+          storeConfig={storeConfig}
         />
       ))}
     </Document>

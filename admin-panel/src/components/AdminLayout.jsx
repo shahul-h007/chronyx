@@ -1,64 +1,195 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { SquaresFour, Package, ShoppingCart, Browsers, Megaphone, Gear, SignOut, ChatCircleDots, Newspaper, Stack, Rows } from '@phosphor-icons/react';
+import { adminConfig } from '../config/adminConfig';
+import {
+  SquaresFour,
+  Package,
+  ShoppingCart,
+  Browsers,
+  Megaphone,
+  Gear,
+  SignOut,
+  ChatCircleDots,
+  Newspaper,
+  Stack,
+  Rows,
+  Globe,
+  List,
+  X,
+  ArrowSquareOut,
+} from '@phosphor-icons/react';
+
+const NAV_GROUPS = [
+  {
+    title: 'OVERVIEW',
+    items: [
+      { path: '/', label: 'Dashboard', icon: SquaresFour, end: true },
+    ],
+  },
+  {
+    title: 'COMMERCE',
+    items: [
+      { path: '/products', label: 'Products', icon: Package },
+      { path: '/collections', label: 'Collections', icon: Stack },
+      { path: '/orders', label: 'Orders', icon: ShoppingCart },
+    ],
+  },
+  {
+    title: 'STOREFRONT',
+    items: [
+      { path: '/content', label: 'Pages & Content', icon: Browsers },
+      { path: '/navigation', label: 'Navigation', icon: Rows },
+      { path: '/journal', label: 'Journal', icon: Newspaper },
+      { path: '/seo', label: 'SEO', icon: Globe },
+    ],
+  },
+  {
+    title: 'CUSTOMERS & MARKETING',
+    items: [
+      { path: '/contacts', label: 'Inquiries', icon: ChatCircleDots },
+      { path: '/marketing', label: 'Marketing', icon: Megaphone },
+    ],
+  },
+  {
+    title: 'SYSTEM',
+    items: [
+      { path: '/settings', label: 'Settings', icon: Gear },
+    ],
+  },
+];
+
+const ROUTE_TITLES = {
+  '/': 'Dashboard',
+  '/products': 'Products',
+  '/products/new': 'New Product',
+  '/collections': 'Collections',
+  '/orders': 'Orders',
+  '/content': 'Pages & Content',
+  '/navigation': 'Navigation',
+  '/journal': 'Journal',
+  '/seo': 'SEO',
+  '/contacts': 'Inquiries',
+  '/marketing': 'Marketing',
+  '/settings': 'Settings',
+};
+
+const getPageTitle = (pathname) => {
+  if (ROUTE_TITLES[pathname]) return ROUTE_TITLES[pathname];
+  if (pathname.startsWith('/products/')) return 'Edit Product';
+  return 'Admin';
+};
 
 const AdminLayout = () => {
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const location = useLocation();
+
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location.pathname]);
+
+  const pageTitle = getPageTitle(location.pathname);
+
   return (
     <div className="admin-layout">
-      <aside className="sidebar">
+      {mobileOpen && (
+        <div
+          className="sidebar-backdrop"
+          onClick={() => setMobileOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      <aside className={`sidebar ${mobileOpen ? 'open' : ''}`}>
         <div className="sidebar-header">
-          CHRONYX ADMIN
+          <div className="sidebar-brand">
+            <span className="sidebar-brand-name">{adminConfig.storeName || 'Store'}</span>
+            <span className="sidebar-brand-badge">{adminConfig.adminLabel || 'Admin'}</span>
+          </div>
+          <button
+            type="button"
+            className="sidebar-close-btn"
+            onClick={() => setMobileOpen(false)}
+            aria-label="Close navigation"
+          >
+            <X size={20} />
+          </button>
         </div>
+
         <nav className="sidebar-nav">
-          <NavLink to="/" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"} end>
-            <SquaresFour size={20} /> Dashboard
-          </NavLink>
-          <NavLink to="/products" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
-            <Package size={20} /> Products
-          </NavLink>
-          <NavLink to="/orders" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
-            <ShoppingCart size={20} /> Orders
-          </NavLink>
-          <NavLink to="/contacts" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
-            <ChatCircleDots size={20} /> Contacts
-          </NavLink>
-          <NavLink to="/content" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
-            <Browsers size={20} /> Content
-          </NavLink>
-          <NavLink to="/journal" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
-            <Newspaper size={20} /> Journal
-          </NavLink>
-          <NavLink to="/collections" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
-            <Stack size={20} /> Collections
-          </NavLink>
-          <NavLink to="/navigation" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
-            <Rows size={20} /> Navigation
-          </NavLink>
-          <NavLink to="/marketing" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
-            <Megaphone size={20} /> Marketing
-          </NavLink>
-          <NavLink to="/seo" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
-            <Browsers size={20} /> SEO Overrides
-          </NavLink>
-          <NavLink to="/settings" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
-            <Gear size={20} /> Settings
-          </NavLink>
+          {NAV_GROUPS.map((group) => (
+            <div key={group.title} className="nav-section">
+              <div className="nav-section-title">{group.title}</div>
+              <div className="nav-section-items">
+                {group.items.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <NavLink
+                      key={item.path}
+                      to={item.path}
+                      end={item.end}
+                      className={({ isActive }) =>
+                        isActive ? 'nav-item active' : 'nav-item'
+                      }
+                    >
+                      <Icon size={18} weight="regular" className="nav-icon" />
+                      <span className="nav-label">{item.label}</span>
+                    </NavLink>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
-        <div style={{ padding: '24px' }}>
-          <button className="nav-item" onClick={async () => await supabase.auth.signOut()} style={{ width: '100%', background: 'none', border: 'none', justifyContent: 'flex-start', padding: '12px 0', cursor: 'pointer' }}>
-            <SignOut size={20} /> Logout
+
+        <div className="sidebar-footer">
+          <button
+            type="button"
+            className="nav-item nav-item-action"
+            onClick={async () => await supabase.auth.signOut()}
+          >
+            <SignOut size={18} weight="regular" className="nav-icon" />
+            <span className="nav-label">Logout</span>
           </button>
         </div>
       </aside>
 
       <main className="main-content">
         <header className="topbar">
-          <div></div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <span style={{ color: 'var(--text-secondary)' }}>Admin User</span>
-            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--border-color)' }}></div>
+          <div className="topbar-left">
+            <button
+              type="button"
+              className="mobile-menu-toggle"
+              onClick={() => setMobileOpen(true)}
+              aria-label="Open menu"
+            >
+              <List size={22} />
+            </button>
+            <div className="topbar-breadcrumb">
+              <span className="topbar-context">{pageTitle}</span>
+            </div>
+          </div>
+
+          <div className="topbar-right">
+            {adminConfig.storefrontUrl && (
+              <a
+                href={adminConfig.storefrontUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="topbar-store-link"
+                title="View storefront in new tab"
+              >
+                <span>View Store</span>
+                <ArrowSquareOut size={16} />
+              </a>
+            )}
+            <div className="topbar-user">
+              <div className="topbar-user-avatar">A</div>
+              <span className="topbar-user-role">Admin</span>
+            </div>
           </div>
         </header>
+
         <div className="page-content">
           <Outlet />
         </div>

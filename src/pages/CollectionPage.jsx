@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { Heart } from '@phosphor-icons/react';
 import { formatCurrency } from '../data/store';
 import SEO from '../components/SEO';
+import { siteConfig } from '../config/siteConfig';
 import { buildBreadcrumbSchema } from '../lib/structuredData';
 
 function CollectionPage({ products = [], collections = [], addToCart, setNotice, toggleWishlist, wishlist = [] }) {
@@ -62,7 +63,7 @@ function CollectionPage({ products = [], collections = [], addToCart, setNotice,
   const seoTitle = `${collection.title} | Luxury Wall Clock Collection`;
   const seoDescription =
     collection.description ||
-    `Shop the ${collection.title} collection of luxury wooden wall clocks by CHRONYX. Handcrafted with precision and timeless design.`;
+    `Shop the ${collection.title} collection of luxury wooden wall clocks by ${siteConfig.name}. Handcrafted with precision and timeless design.`;
 
   return (
     <div className="page-stack">
@@ -109,7 +110,7 @@ function CollectionPage({ products = [], collections = [], addToCart, setNotice,
                   <Link className="product-image-link hover-zoom" to={`/products/${product.id}`}>
                     <img
                       src={product.hero}
-                      alt={`${product.name} - ${collection.title} Collection by CHRONYX`}
+                      alt={`${product.name} - ${collection.title} Collection by ${siteConfig.name}`}
                       loading="lazy"
                     />
                   </Link>
@@ -192,7 +193,7 @@ function CollectionPage({ products = [], collections = [], addToCart, setNotice,
                   {col.image_url && (
                     <img
                       src={col.image_url}
-                      alt={`${col.title} collection - CHRONYX luxury wooden clocks`}
+                      alt={`${col.title} collection - ${siteConfig.name} luxury wooden clocks`}
                       loading="lazy"
                     />
                   )}

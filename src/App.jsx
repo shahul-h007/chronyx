@@ -12,9 +12,10 @@ import ExitIntentPopup from './components/ExitIntentPopup';
 import BackToTop from './components/BackToTop';
 import Analytics from './components/Analytics';
 import SiteSchemas from './components/SiteSchemas';
-import { buildSiteContent, defaultSiteContent } from './lib/siteContent';
+import { buildSiteContent, defaultSiteContent, toBoolean } from './lib/siteContent';
 import { siteConfig } from './config/siteConfig';
 import { featureConfig } from './config/featureConfig';
+import { defaultTheme, resolveDataTheme } from './config/themeConfig';
 
 import {
   initialPayment,
@@ -82,7 +83,7 @@ const DEFAULT_STORE_SETTINGS = {
 };
 
 function StoreApp() {
-  const [theme, setTheme] = useState('maple');
+  const [theme, setTheme] = useState(defaultTheme || 'chronyx');
   const [splashDone, setSplashDone] = useState(false);
   const [cart, setCart] = useState(loadCart);
   const [shipping, setShipping] = useState(initialShipping);
@@ -258,7 +259,8 @@ function StoreApp() {
 
   useEffect(() => {
     const html = document.documentElement;
-    if (theme === 'maple') html.setAttribute('data-theme', 'maple');
+    const resolved = resolveDataTheme(theme);
+    if (resolved) html.setAttribute('data-theme', resolved);
     else html.removeAttribute('data-theme');
   }, [theme]);
 
@@ -553,7 +555,7 @@ function StoreApp() {
             <Route path="/confirmation" element={<ConfirmationPage />} />
             <Route path="/shop" element={<ShopPage addToCart={addToCart} setNotice={setNotice} toggleWishlist={toggleWishlist} wishlist={wishlist} products={products} collections={collections} />} />
             <Route path="/collections/:slug" element={<CollectionPage products={products} collections={collections} addToCart={addToCart} setNotice={setNotice} toggleWishlist={toggleWishlist} wishlist={wishlist} />} />
-            <Route path="/review/:orderId" element={<ReviewPage user={user} />} />
+            <Route path="/review/:orderId" element={featureConfig.reviews ? <ReviewPage user={user} /> : <Navigate to="/" replace />} />
             <Route path="/about" element={<AboutPage siteContent={siteContent} />} />
             <Route path="/contact" element={<ContactPage siteContent={siteContent} storeSettings={storeSettings} />} />
             <Route
@@ -597,14 +599,14 @@ function StoreApp() {
 
       <SiteFooter
         footerContent={siteContent.footerContent}
-        showJournal={Boolean(storeSettings.show_journal)}
+        showJournal={showJournal}
         storeName={publicStoreName}
       />
       <ConsentPrompt />
-      <ExitIntentPopup user={user} />
+      {featureConfig.exitIntentPopup ? <ExitIntentPopup user={user} /> : null}
       <BackToTop />
       
-      {whatsappNumber ? (
+      {featureConfig.whatsappWidget && whatsappNumber ? (
         <a
           href={`https://wa.me/${whatsappNumber}`}
           target="_blank"

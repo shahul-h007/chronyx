@@ -1,18 +1,32 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { siteConfig } from '../config/siteConfig';
+import { toBoolean, isJournalPath } from '../lib/siteContent';
 
 function SiteFooter({
   storeName = siteConfig.name,
   showJournal = false,
   footerContent = {},
 }) {
-  const exploreLinks = (footerContent?.exploreLinks || []).filter(
-    (link) => link?.visible !== false && link?.label && link?.path && (link.path !== '/blog' || showJournal)
-  );
-  const supportLinks = (footerContent?.supportLinks || []).filter(
-    (link) => link?.visible !== false && link?.label && link?.path
-  );
+  const isJournalFeatureActive = toBoolean(showJournal, false);
+
+  const filterLink = (link) => {
+    if (!link || !link.label || !link.path) return false;
+    if (isJournalPath(link.path)) {
+      return isJournalFeatureActive && link.visible !== false;
+    }
+    return link.visible !== false;
+  };
+
+  const rawExploreLinks = footerContent?.exploreLinks || [];
+  const hasJournalInExplore = rawExploreLinks.some((link) => isJournalPath(link?.path));
+  const filteredExploreLinks = rawExploreLinks.filter(filterLink);
+
+  const exploreLinks = [
+    ...filteredExploreLinks,
+    ...(isJournalFeatureActive && !hasJournalInExplore ? [{ label: 'Journal', path: '/blog' }] : []),
+  ];
+  const supportLinks = (footerContent?.supportLinks || []).filter(filterLink);
   const instagramUrl = siteConfig.social?.instagram;
 
   return (

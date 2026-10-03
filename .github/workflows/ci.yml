@@ -1,0 +1,51 @@
+name: CI & Deployment Preflight
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  preflight-and-build:
+    name: Preflight, Test & Production Builds
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Root Dependencies
+        run: npm ci
+
+      - name: Install Admin Panel Dependencies
+        run: npm --prefix admin-panel ci
+
+      - name: Setup Mock Environment for Preflight
+        run: |
+          cp .env.example .env
+          cp admin-panel/.env.example admin-panel/.env
+
+      - name: Run Configuration Validation
+        run: npm run validate-config
+
+      - name: Run Asset Validation
+        run: npm run validate-assets
+
+      - name: Run Unit Tests
+        run: npm test
+
+      - name: Run Deployment Preflight
+        run: npm run preflight
+
+      - name: Build Storefront
+        run: npm run build
+
+      - name: Build Admin Panel
+        run: npm --prefix admin-panel run build

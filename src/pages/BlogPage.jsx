@@ -4,6 +4,7 @@ import { ArrowRight } from '@phosphor-icons/react';
 import SEO from '../components/SEO';
 import { supabase } from '../lib/supabase';
 import { fallbackArticles, formatArticleDate } from '../lib/journal';
+import { siteConfig } from '../config/siteConfig';
 
 function BlogPage() {
   const [articles, setArticles] = useState(fallbackArticles);
@@ -50,12 +51,12 @@ function BlogPage() {
     <div className="page-stack">
       <SEO
         title="Journal"
-        description="Stories from CHRONYX on craft, wood, interiors, and the rituals of time."
+        description={`Stories from ${siteConfig.name} on craft, wood, interiors, and the rituals of time.`}
         path="/blog"
       />
       <section className="page-header-panel">
         <p className="label">Journal</p>
-        <h1>CHRONYX Journal</h1>
+        <h1>{siteConfig.name} Journal</h1>
       </section>
 
       {featuredArticle ? (

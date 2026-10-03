@@ -6,6 +6,7 @@ import Products from './pages/Products';
 import ProductForm from './pages/ProductForm';
 import Dashboard from './pages/Dashboard';
 import Orders from './pages/Orders';
+import OrderDetail from './pages/OrderDetail';
 import Contacts from './pages/Contacts';
 import Content from './pages/Content';
 import Journal from './pages/Journal';
@@ -69,6 +70,7 @@ function App() {
           <Route path="products/new" element={<ProductForm />} />
           <Route path="products/:id" element={<ProductForm />} />
           <Route path="orders" element={<Orders />} />
+          <Route path="orders/:id" element={<OrderDetail />} />
           <Route path="contacts" element={<Contacts />} />
           <Route path="content" element={<Content />} />
           <Route path="journal" element={<Journal />} />

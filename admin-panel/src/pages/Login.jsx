@@ -46,38 +46,38 @@ const Login = () => {
     }}>
       <div className="card" style={{ maxWidth: '400px', width: '100%', padding: '40px' }}>
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <LockKey size={48} color="var(--accent)" weight="duotone" style={{ marginBottom: '16px' }} />
-          <h2 style={{ marginBottom: '8px' }}>Admin Portal</h2>
-          <p style={{ color: 'var(--text-secondary)' }}>Sign in to manage your store</p>
+          <LockKey size={48} color="var(--admin-primary)" weight="duotone" style={{ marginBottom: '16px' }} />
+          <h2 style={{ marginBottom: '8px', color: 'var(--admin-text)' }}>Admin Portal</h2>
+          <p style={{ color: 'var(--admin-text-muted)' }}>Sign in to manage your store</p>
         </div>
 
         {errorMsg && (
-          <div style={{ background: 'var(--danger)', color: 'white', padding: '12px', borderRadius: '8px', marginBottom: '24px', fontSize: '0.9rem' }}>
+          <div style={{ background: 'var(--admin-danger-subtle)', color: 'var(--admin-danger)', border: '1px solid rgba(185, 28, 28, 0.25)', padding: '12px', borderRadius: '8px', marginBottom: '24px', fontSize: '0.9rem' }}>
             {errorMsg}
           </div>
         )}
 
         <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div>
-            <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Email Address</label>
+            <label style={{ display: 'block', marginBottom: '8px', color: 'var(--admin-text)', fontSize: '0.9rem', fontWeight: 500 }}>Email Address</label>
             <input 
               type="email" 
               value={email} 
               onChange={(e) => setEmail(e.target.value)}
               required
-              placeholder="admin@chronyx.in"
-              style={{ width: '100%', padding: '12px', background: 'var(--surface)', border: '1px solid var(--line)', color: 'white', borderRadius: '8px' }}
+              placeholder="admin@example.com"
+              style={{ width: '100%', padding: '12px', background: 'var(--admin-surface)', border: '1px solid var(--admin-border-strong)', color: 'var(--admin-text)', borderRadius: '8px' }}
             />
           </div>
           <div>
-            <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Password</label>
+            <label style={{ display: 'block', marginBottom: '8px', color: 'var(--admin-text)', fontSize: '0.9rem', fontWeight: 500 }}>Password</label>
             <input 
               type="password" 
               value={password} 
               onChange={(e) => setPassword(e.target.value)}
               required
               placeholder="••••••••"
-              style={{ width: '100%', padding: '12px', background: 'var(--surface)', border: '1px solid var(--line)', color: 'white', borderRadius: '8px' }}
+              style={{ width: '100%', padding: '12px', background: 'var(--admin-surface)', border: '1px solid var(--admin-border-strong)', color: 'var(--admin-text)', borderRadius: '8px' }}
             />
           </div>
           

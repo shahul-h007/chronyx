@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { CheckCircle, Package, Truck } from '@phosphor-icons/react';
 import { useLocation } from 'react-router-dom';
 import SEO from '../components/SEO';
+import { siteConfig } from '../config/siteConfig';
 
 const buildTimeline = (orderId) => {
   const now = new Date();
@@ -64,7 +65,7 @@ function TrackingPage() {
     <div className="page-stack">
       <SEO
         title="Track Order"
-        description="Track your CHRONYX order status, dispatch progress, and delivery timeline."
+        description={`Track your ${siteConfig.name} order status, dispatch progress, and delivery timeline.`}
         path="/track"
       />
       <section className="page-header-panel">

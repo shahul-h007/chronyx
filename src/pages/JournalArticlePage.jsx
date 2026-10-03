@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import SEO from '../components/SEO';
 import { supabase } from '../lib/supabase';
 import { formatCurrency } from '../data/store';
+import { siteConfig } from '../config/siteConfig';
 import { fallbackArticles, findFallbackArticle, formatArticleDate } from '../lib/journal';
 import { buildArticleSchema } from '../lib/structuredData';
 import { sanitizeArticleHtml } from '../lib/sanitizeHtml';
@@ -61,7 +62,7 @@ function JournalArticlePage({ products = [] }) {
   return (
     <div className="page-stack" style={{ paddingTop: 0 }}>
       <SEO
-        title={article.seo_title || `${article.title} | CHRONYX Journal`}
+        title={article.seo_title || `${article.title} | ${siteConfig.name} Journal`}
         description={article.seo_description || article.excerpt}
         path={`/journal/${article.slug}`}
         schema={schema}

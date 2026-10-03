@@ -1,7 +1,7 @@
-import { siteConfig } from '../config/siteConfig';
+import { siteConfig } from '../config/siteConfig.js';
 
 export const CART_KEY = siteConfig.storage.cartKey;
-export const ORDER_KEY = 'chronyx-orders';
+export const ORDER_KEY = siteConfig.storage.orderKey || 'chronyx-orders';
 
 export const homeHighlights = [
   {
@@ -39,12 +39,16 @@ export const initialPayment = {
   upi: '',
 };
 
-export const formatCurrency = (value) =>
-  new Intl.NumberFormat('en-IN', {
+/**
+ * Format currency using the store's configured localization settings.
+ * Defaults to INR / en-IN for full backward compatibility.
+ */
+export const formatCurrency = (value, config = siteConfig.localization) =>
+  new Intl.NumberFormat(config?.locale || 'en-IN', {
     style: 'currency',
-    currency: 'INR',
-    maximumFractionDigits: 0,
-  }).format(value);
+    currency: config?.currencyCode || 'INR',
+    maximumFractionDigits: config?.maximumFractionDigits ?? 0,
+  }).format(Number(value || 0));
 
 export const loadCart = () => {
   if (typeof window === 'undefined') return [];

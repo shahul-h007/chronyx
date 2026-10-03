@@ -2,6 +2,7 @@ import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import SEO from '../components/SEO';
 import { formatCurrency } from '../data/store';
+import { siteConfig } from '../config/siteConfig';
 
 function LocationPage({ products = [] }) {
   const { city } = useParams();
@@ -14,7 +15,7 @@ function LocationPage({ products = [] }) {
   return (
     <div className="page-stack">
       <SEO
-        title={`Luxury Wooden Wall Clocks in ${cityName} | CHRONYX`}
+        title={`Luxury Wooden Wall Clocks in ${cityName} | ${siteConfig.name}`}
         description={`Discover premium, handcrafted wooden wall clocks available for free delivery in ${cityName}. Elevate your home decor with our exclusive collection.`}
         path={`/locations/${city}`}
       />
@@ -57,7 +58,7 @@ function LocationPage({ products = [] }) {
       </section>
 
       <section className="catalog-section review-section" style={{ textAlign: 'center', padding: '60px 20px', background: 'var(--surface-2)', borderRadius: '24px' }}>
-        <h2>Why collectors in {cityName} choose CHRONYX</h2>
+        <h2>Why collectors in {cityName} choose {siteConfig.name}</h2>
         <div className="feature-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '24px', marginTop: '40px' }}>
           <div>
             <h3>Free {cityName} Delivery</h3>

@@ -1,7 +1,7 @@
 {
   "name": "chronyx-website",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,6 +10,15 @@
     "build": "vite build",
     "preview": "vite preview",
     "security:audit": "node scripts/security-audit.mjs",
+    "provision-client": "node scripts/provision-client.mjs",
+    "validate-config": "node scripts/validate-config.mjs",
+    "validate-assets": "node scripts/validate-assets.mjs",
+    "provision-supabase": "node scripts/provision-supabase.mjs",
+    "seed-database": "node scripts/seed-database.mjs",
+    "provision-storage": "node scripts/provision-storage.mjs",
+    "bootstrap-admin": "node scripts/bootstrap-admin.mjs",
+    "preflight": "node scripts/preflight.mjs",
+    "verify-deployment": "node scripts/preflight.mjs",
     "test": "vitest run src",
     "test:e2e": "playwright test"
   },

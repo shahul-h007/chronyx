@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { formatCurrency } from '../data/store';
 import SEO from '../components/SEO';
 import VideoPlayer from '../components/VideoPlayer';
+import { siteConfig } from '../config/siteConfig';
 import { supabase } from '../lib/supabase';
 import {
   buildBreadcrumbSchema,
@@ -341,7 +342,7 @@ function ProductPage({ addToCart, products = [] }) {
       {relatedProducts.length > 0 ? (
         <section className="catalog-section">
           <div className="section-heading">
-            <p className="label">More From CHRONYX</p>
+            <p className="label">More From {siteConfig.name}</p>
             <h2>You might also like</h2>
           </div>
           <div className="product-grid related-product-grid">

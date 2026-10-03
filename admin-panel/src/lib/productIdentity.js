@@ -22,19 +22,19 @@ function buildRandomSeed() {
     .slice(0, 16);
 }
 
-export function buildPublicProductId(productId) {
+export function buildPublicProductId(productId, prefix = 'CHX') {
   const compact = sanitizeSeed(productId).slice(0, 10) || 'PENDING0000';
-  return `CHX-${compact}`;
+  return `${prefix}-${compact}`;
 }
 
-export function createAuthenticityUnit(product, serialNumber) {
+export function createAuthenticityUnit(product, serialNumber, prefix = 'CHXU') {
   const randomSeed = buildRandomSeed();
   const nameSeed = buildNameSeed(product?.name);
   const serial = String(serialNumber || 1).padStart(4, '0');
 
   return {
     serial_number: Number(serialNumber || 1),
-    public_unit_id: `CHXU-${nameSeed}-${serial}-${randomSeed.slice(0, 4)}`,
+    public_unit_id: `${prefix}-${nameSeed}-${serial}-${randomSeed.slice(0, 4)}`,
     authenticity_code: `AUTH-${randomSeed.slice(4, 8)}-${randomSeed.slice(8, 12)}-${randomSeed.slice(12, 16)}`,
     status: 'available',
   };

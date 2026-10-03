@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import SEO from '../components/SEO';
+import { siteConfig } from '../config/siteConfig';
 import { buildBreadcrumbSchema } from '../lib/structuredData';
 
 function PlacementGuidePage() {
@@ -67,7 +68,7 @@ function PlacementGuidePage() {
           <div style={{ padding: '32px', background: 'var(--surface-2)', borderRadius: '16px', marginTop: '40px' }}>
             <h3>Looking for the perfect timepiece?</h3>
             <p>
-              CHRONYX clocks are crafted from sustainably sourced hardwoods and feature silent sweeping movements.
+              {siteConfig.name} clocks are crafted from sustainably sourced hardwoods and feature silent sweeping movements.
             </p>
             <div style={{ marginTop: '24px' }}>
               <Link to="/shop" className="primary-btn" style={{ display: 'inline-block' }}>

@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { ArrowRight, Eye, EyeSlash } from '@phosphor-icons/react';
 import { supabase } from '../lib/supabase';
+import { siteConfig } from '../config/siteConfig';
 
-const SITE_URL = import.meta.env.VITE_SITE_URL || 'https://chronyx.in';
+const SITE_URL = import.meta.env.VITE_SITE_URL || (siteConfig.domain ? `https://${siteConfig.domain}` : 'https://chronyx.in');
 
 const inputStyle = {
   width: '100%',
@@ -124,7 +125,7 @@ function AuthPage({ user }) {
           {isLogin ? 'Welcome Back' : 'Create Account'}
         </h1>
         <p style={{ textAlign: 'center', color: 'var(--text-secondary)', marginBottom: '32px' }}>
-          {isLogin ? 'Sign in to access your orders and saved items.' : 'Join CHRONYX to track orders and save favorites.'}
+          {isLogin ? 'Sign in to access your orders and saved items.' : `Join ${siteConfig.name} to track orders and save favorites.`}
         </p>
 
         {message.text && (

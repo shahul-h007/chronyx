@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
-  ArrowUpRight,
+  ArrowClockwise,
+  ArrowRight,
   ChartLineUp,
   ChatCircleDots,
   ClockCounterClockwise,
@@ -10,29 +12,51 @@ import {
   WarningCircle,
 } from '@phosphor-icons/react';
 import { supabase } from '../lib/supabase';
+import { AdminPageHeader, StatCard, StatusBadge, EmptyState } from '../components/common';
+import { formatCurrency } from '../config/adminConfig';
 
 const monthFormatter = new Intl.DateTimeFormat('en-IN', { month: 'short' });
 const dateFormatter = new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short' });
 
-function formatCurrency(value) {
-  return `INR ${Number(value || 0).toLocaleString('en-IN')}`;
+function formatDate(dateString) {
+  if (!dateString) return '—';
+  const d = new Date(dateString);
+  return Number.isNaN(d.getTime()) ? '—' : dateFormatter.format(d);
 }
 
-function StatCard({ label, value, meta, icon, tone = 'default' }) {
-  return (
-    <div className={`card dashboard-stat-card ${tone !== 'default' ? `is-${tone}` : ''}`}>
-      <div className="dashboard-stat-top">
-        <span>{label}</span>
-        <div className="dashboard-stat-icon">{icon}</div>
-      </div>
-      <h3>{value}</h3>
-      <p>{meta}</p>
-    </div>
-  );
+function getOrderStatusTone(status) {
+  switch (String(status || '').toLowerCase()) {
+    case 'delivered':
+    case 'completed':
+      return 'success';
+    case 'shipped':
+      return 'info';
+    case 'processing':
+    case 'pending':
+      return 'warning';
+    case 'cancelled':
+    case 'refunded':
+      return 'danger';
+    default:
+      return 'neutral';
+  }
+}
+
+function formatStatusLabel(status) {
+  if (!status) return 'Processing';
+  return String(status).replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 function LineChart({ data }) {
-  if (!data.length) return <div className="dashboard-chart-empty">No revenue data yet.</div>;
+  if (!data || !data.length || data.every((d) => d.value === 0)) {
+    return (
+      <EmptyState
+        icon={ChartLineUp}
+        title="No revenue data yet"
+        description="Monthly revenue trends will plot automatically as confirmed orders are received."
+      />
+    );
+  }
 
   const width = 520;
   const height = 220;
@@ -55,16 +79,33 @@ function LineChart({ data }) {
       <svg viewBox={`0 0 ${width} ${height}`} className="dashboard-line-chart" preserveAspectRatio="none">
         <defs>
           <linearGradient id="dashboardArea" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="rgba(200, 147, 90, 0.34)" />
-            <stop offset="100%" stopColor="rgba(200, 147, 90, 0.02)" />
+            <stop offset="0%" stopColor="rgba(15, 23, 42, 0.08)" />
+            <stop offset="100%" stopColor="rgba(15, 23, 42, 0.0)" />
           </linearGradient>
         </defs>
         <polygon points={areaPoints} fill="url(#dashboardArea)" />
-        <polyline points={points} fill="none" stroke="#c8935a" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+        <polyline
+          points={points}
+          fill="none"
+          stroke="var(--admin-primary, #0f172a)"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
         {data.map((item, index) => {
           const x = padding + stepX * index;
           const y = height - padding - (item.value / max) * (height - padding * 2);
-          return <circle key={item.label} cx={x} cy={y} r="4" fill="#f6efe4" stroke="#c8935a" strokeWidth="2" />;
+          return (
+            <circle
+              key={item.label}
+              cx={x}
+              cy={y}
+              r="4"
+              fill="#ffffff"
+              stroke="var(--admin-primary, #0f172a)"
+              strokeWidth="2"
+            />
+          );
         })}
       </svg>
       <div className="dashboard-chart-labels">
@@ -80,7 +121,15 @@ function LineChart({ data }) {
 }
 
 function BarList({ items, total }) {
-  if (!items.length) return <div className="dashboard-chart-empty">No status data yet.</div>;
+  if (!items || !items.length) {
+    return (
+      <EmptyState
+        icon={ShoppingCart}
+        title="No status data yet"
+        description="Order fulfillment distribution will display here once orders are placed."
+      />
+    );
+  }
 
   return (
     <div className="dashboard-bar-list">
@@ -89,11 +138,18 @@ function BarList({ items, total }) {
         return (
           <div key={item.label} className="dashboard-bar-row">
             <div className="dashboard-bar-copy">
-              <span>{item.label}</span>
-              <strong>{item.value}</strong>
+              <span className="dashboard-bar-label">
+                <StatusBadge status={getOrderStatusTone(item.label)}>{item.label}</StatusBadge>
+              </span>
+              <strong>
+                {item.value} <span className="dashboard-bar-percent">({percent}%)</span>
+              </strong>
             </div>
             <div className="dashboard-bar-track">
-              <div className="dashboard-bar-fill" style={{ width: `${Math.max(percent, item.value ? 8 : 0)}%` }} />
+              <div
+                className="dashboard-bar-fill"
+                style={{ width: `${Math.max(percent, item.value ? 6 : 0)}%` }}
+              />
             </div>
           </div>
         );
@@ -112,6 +168,7 @@ function safeNumber(...values) {
 
 const Dashboard = () => {
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [orders, setOrders] = useState([]);
   const [products, setProducts] = useState([]);
   const [waitlist, setWaitlist] = useState([]);
@@ -124,6 +181,7 @@ const Dashboard = () => {
 
   const fetchDashboardData = async () => {
     setLoading(true);
+    setError(null);
     try {
       const [ordersResult, productsResult, waitlistResult, subscribersResult, contactsResult] = await Promise.all([
         supabase.from('orders').select('*').order('created_at', { ascending: false }),
@@ -138,8 +196,13 @@ const Dashboard = () => {
       if (!waitlistResult.error) setWaitlist(waitlistResult.data || []);
       if (!subscribersResult.error) setSubscribers(subscribersResult.data || []);
       if (!contactsResult.error) setContacts(contactsResult.data || []);
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+
+      if (ordersResult.error && productsResult.error) {
+        setError('Failed to connect to the store database. Please check your network and try again.');
+      }
+    } catch (err) {
+      console.error('Error fetching dashboard data:', err);
+      setError('Unable to load dashboard data. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -213,56 +276,161 @@ const Dashboard = () => {
     };
   }, [orders, products, waitlist, subscribers, contacts]);
 
-  if (loading) return <div>Loading dashboard...</div>;
+  if (loading && orders.length === 0 && products.length === 0) {
+    return (
+      <div className="dashboard-page">
+        <AdminPageHeader
+          eyebrow="Overview"
+          title="Dashboard"
+          description="Live performance, order health, inventory pressure, and customer signals."
+        />
+        <div className="dashboard-loading-state">
+          <div className="dashboard-loading-spinner">
+            <ArrowClockwise size={28} className="spin-icon" />
+          </div>
+          <p>Loading dashboard metrics...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="dashboard-page">
-      <div className="page-header">
-        <div>
-          <h2>Dashboard Overview</h2>
-          <p className="cms-page-subtitle">
-            Live performance, order health, customer signals, and inventory pressure from your current store data.
-          </p>
-        </div>
-      </div>
+      <AdminPageHeader
+        eyebrow="Overview"
+        title="Dashboard"
+        description="Live performance, order health, inventory pressure, and customer signals."
+        actions={
+          <button
+            type="button"
+            onClick={fetchDashboardData}
+            className="btn-secondary"
+            title="Refresh store data"
+            disabled={loading}
+          >
+            <ArrowClockwise size={16} className={loading ? 'spin-icon' : ''} />
+            <span>Refresh</span>
+          </button>
+        }
+      />
 
-      <section className="dashboard-stat-grid">
+      {error && (
+        <div className="dashboard-error-banner" role="alert">
+          <div className="dashboard-error-content">
+            <WarningCircle size={20} />
+            <span>{error}</span>
+          </div>
+          <button type="button" onClick={fetchDashboardData} className="btn-secondary btn-sm">
+            Retry
+          </button>
+        </div>
+      )}
+
+      {/* Primary KPI Row */}
+      <section className="dashboard-stat-grid" aria-label="Key Performance Indicators">
         <StatCard
-          label="Revenue"
+          label="Total Revenue"
           value={formatCurrency(analytics.revenue)}
-          meta={`${analytics.orders} active order(s) tracked`}
-          icon={<CurrencyInr size={18} />}
+          description={`${analytics.orders} active order(s) tracked`}
+          icon={CurrencyInr}
+          tone="neutral"
         />
         <StatCard
-          label="Average Order Value"
+          label="Avg. Order Value"
           value={formatCurrency(analytics.averageOrderValue)}
-          meta="Based on non-cancelled orders"
-          icon={<ChartLineUp size={18} />}
+          description="Based on non-cancelled orders"
+          icon={ChartLineUp}
+          tone="neutral"
         />
         <StatCard
-          label="Unread Contacts"
+          label="Unread Inquiries"
           value={analytics.unreadContacts}
-          meta="Messages needing follow-up from the storefront"
-          icon={<ChatCircleDots size={18} />}
-          tone={analytics.unreadContacts > 0 ? 'warning' : 'default'}
+          description={
+            analytics.unreadContacts > 0
+              ? 'Requires customer follow-up'
+              : 'Inbox is completely caught up'
+          }
+          icon={ChatCircleDots}
+          tone={analytics.unreadContacts > 0 ? 'warning' : 'neutral'}
         />
         <StatCard
-          label="Low Stock Alerts"
+          label="Low Stock Items"
           value={analytics.lowStockProducts.length}
-          meta={`${analytics.publishedProducts} product(s) currently live`}
-          icon={<WarningCircle size={18} />}
-          tone={analytics.lowStockProducts.length > 0 ? 'danger' : 'default'}
+          description={`${analytics.publishedProducts} product(s) live in catalog`}
+          icon={WarningCircle}
+          tone={analytics.lowStockProducts.length > 0 ? 'danger' : 'neutral'}
         />
       </section>
 
+      {/* Main Operational Row: Recent Orders (1.25fr) & Order Health (0.75fr) */}
+      <section className="dashboard-main-grid">
+        <div className="card dashboard-panel">
+          <div className="dashboard-panel-header">
+            <div>
+              <p className="dashboard-panel-eyebrow">Fulfillment</p>
+              <h3>Recent Orders</h3>
+            </div>
+            <Link to="/orders" className="dashboard-panel-action">
+              <span>View all orders</span>
+              <ArrowRight size={14} />
+            </Link>
+          </div>
+
+          {analytics.recentOrders.length === 0 ? (
+            <EmptyState
+              icon={ShoppingCart}
+              title="No orders yet"
+              description="Customer orders placed on the storefront will appear here."
+              action={
+                <Link to="/orders" className="btn-secondary">
+                  Go to Orders
+                </Link>
+              }
+            />
+          ) : (
+            <div className="dashboard-order-list">
+              {analytics.recentOrders.map((order) => (
+                <div key={order.id} className="dashboard-order-row">
+                  <div className="dashboard-order-info">
+                    <div className="dashboard-order-customer-line">
+                      <strong>{order.customer_name || 'Guest checkout'}</strong>
+                      <span className="dashboard-order-id">#{String(order.id).slice(0, 8)}</span>
+                    </div>
+                    <span className="dashboard-order-date">{formatDate(order.created_at)}</span>
+                  </div>
+                  <div className="dashboard-order-side">
+                    <b>{formatCurrency(safeNumber(order.total_amount, order.total))}</b>
+                    <StatusBadge status={getOrderStatusTone(order.status)}>
+                      {formatStatusLabel(order.status)}
+                    </StatusBadge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="card dashboard-panel">
+          <div className="dashboard-panel-header">
+            <div>
+              <p className="dashboard-panel-eyebrow">Status Breakdown</p>
+              <h3>Order Health</h3>
+            </div>
+            <span className="dashboard-chip">{analytics.orders} active total</span>
+          </div>
+          <BarList items={analytics.statusData} total={analytics.orders} />
+        </div>
+      </section>
+
+      {/* Sales Trend & Inventory Pressure */}
       <section className="dashboard-main-grid">
         <div className="card dashboard-panel dashboard-chart-panel">
           <div className="dashboard-panel-header">
             <div>
               <p className="dashboard-panel-eyebrow">Sales Trend</p>
-              <h3>Revenue over the last 6 months</h3>
+              <h3>Revenue Over Time</h3>
             </div>
-            <span className="dashboard-chip">Live orders data</span>
+            <span className="dashboard-chip">Last 6 Months</span>
           </div>
           <LineChart data={analytics.monthlyRevenue} />
         </div>
@@ -270,48 +438,21 @@ const Dashboard = () => {
         <div className="card dashboard-panel">
           <div className="dashboard-panel-header">
             <div>
-              <p className="dashboard-panel-eyebrow">Order Health</p>
-              <h3>Status distribution</h3>
+              <p className="dashboard-panel-eyebrow">Inventory Alert</p>
+              <h3>Low Stock Products</h3>
             </div>
-            <span className="dashboard-chip">{analytics.orders} total</span>
+            <Link to="/products" className="dashboard-panel-action">
+              <span>Manage catalog</span>
+              <ArrowRight size={14} />
+            </Link>
           </div>
-          <BarList items={analytics.statusData} total={analytics.orders} />
-        </div>
-      </section>
 
-      <section className="dashboard-secondary-grid">
-        <div className="card dashboard-panel">
-          <div className="dashboard-panel-header">
-            <div>
-              <p className="dashboard-panel-eyebrow">Audience Signals</p>
-              <h3>Customer interest snapshot</h3>
-            </div>
-          </div>
-          <div className="dashboard-audience-grid">
-            <div className="dashboard-mini-metric">
-              <span>Newsletter</span>
-              <strong>{analytics.newsletterAudience}</strong>
-            </div>
-            <div className="dashboard-mini-metric">
-              <span>Waitlist</span>
-              <strong>{analytics.waitlistAudience}</strong>
-            </div>
-            <div className="dashboard-mini-metric">
-              <span>Unread contacts</span>
-              <strong>{analytics.unreadContacts}</strong>
-            </div>
-          </div>
-        </div>
-
-        <div className="card dashboard-panel">
-          <div className="dashboard-panel-header">
-            <div>
-              <p className="dashboard-panel-eyebrow">Inventory Pressure</p>
-              <h3>Products needing attention</h3>
-            </div>
-          </div>
           {analytics.lowStockProducts.length === 0 ? (
-            <div className="dashboard-chart-empty">No low-stock products right now.</div>
+            <EmptyState
+              icon={Package}
+              title="Stock levels healthy"
+              description="All products currently have 6 or more units in inventory."
+            />
           ) : (
             <div className="dashboard-alert-list">
               {analytics.lowStockProducts.map((product) => (
@@ -320,7 +461,9 @@ const Dashboard = () => {
                     <strong>{product.name}</strong>
                     <span>{product.category}</span>
                   </div>
-                  <b>{product.stock} left</b>
+                  <StatusBadge status={product.stock === 0 ? 'danger' : 'warning'}>
+                    {product.stock === 0 ? 'Out of stock' : `${product.stock} units left`}
+                  </StatusBadge>
                 </div>
               ))}
             </div>
@@ -328,70 +471,77 @@ const Dashboard = () => {
         </div>
       </section>
 
-      <section className="dashboard-main-grid">
+      {/* Secondary Row: Audience Signals & Storefront Pulse */}
+      <section className="dashboard-secondary-grid">
         <div className="card dashboard-panel">
           <div className="dashboard-panel-header">
             <div>
-              <p className="dashboard-panel-eyebrow">Recent Orders</p>
-              <h3>Latest customer activity</h3>
+              <p className="dashboard-panel-eyebrow">Audience Signals</p>
+              <h3>Customer Engagement</h3>
+            </div>
+            <Link to="/contacts" className="dashboard-panel-action">
+              <span>Inbox</span>
+              <ArrowRight size={14} />
+            </Link>
+          </div>
+          <div className="dashboard-audience-grid">
+            <div className="dashboard-mini-metric">
+              <span>Newsletter Subscribers</span>
+              <strong>{analytics.newsletterAudience}</strong>
+            </div>
+            <div className="dashboard-mini-metric">
+              <span>Waitlist Leads</span>
+              <strong>{analytics.waitlistAudience}</strong>
+            </div>
+            <div className="dashboard-mini-metric">
+              <span>Unread Inquiries</span>
+              <strong>{analytics.unreadContacts}</strong>
             </div>
           </div>
-          {analytics.recentOrders.length === 0 ? (
-            <div className="dashboard-chart-empty">No orders yet.</div>
-          ) : (
-            <div className="dashboard-order-list">
-              {analytics.recentOrders.map((order) => (
-                <div key={order.id} className="dashboard-order-row">
-                  <div>
-                    <strong>{order.customer_name || 'Guest checkout'}</strong>
-                    <span>{dateFormatter.format(new Date(order.created_at))}</span>
-                  </div>
-                  <div className="dashboard-order-side">
-                    <b>{formatCurrency(safeNumber(order.total_amount, order.total))}</b>
-                    <span className={`dashboard-status-pill is-${order.status || 'processing'}`}>
-                      {String(order.status || 'processing').replace('_', ' ')}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
 
         <div className="card dashboard-panel">
           <div className="dashboard-panel-header">
             <div>
-              <p className="dashboard-panel-eyebrow">Operations Pulse</p>
-              <h3>What matters right now</h3>
+              <p className="dashboard-panel-eyebrow">Storefront Pulse</p>
+              <h3>Operational Snapshot</h3>
             </div>
           </div>
           <div className="dashboard-activity-list">
             <div className="dashboard-activity-item">
-              <div className="dashboard-activity-icon"><ShoppingCart size={16} /></div>
+              <div className="dashboard-activity-icon">
+                <ShoppingCart size={18} />
+              </div>
               <div>
                 <strong>{analytics.orders} confirmed order(s)</strong>
-                <span>Current non-cancelled order count across the store.</span>
+                <span>Active orders currently being fulfilled across the store.</span>
               </div>
             </div>
             <div className="dashboard-activity-item">
-              <div className="dashboard-activity-icon"><Package size={16} /></div>
+              <div className="dashboard-activity-icon">
+                <Package size={18} />
+              </div>
               <div>
-                <strong>{analytics.publishedProducts} visible product(s)</strong>
-                <span>Products currently available or visible from product data.</span>
+                <strong>{analytics.publishedProducts} catalog product(s)</strong>
+                <span>Products currently live and purchasable in the storefront.</span>
               </div>
             </div>
             <div className="dashboard-activity-item">
-              <div className="dashboard-activity-icon"><ClockCounterClockwise size={16} /></div>
+              <div className="dashboard-activity-icon">
+                <ClockCounterClockwise size={18} />
+              </div>
               <div>
-                <strong>{analytics.waitlistAudience + analytics.newsletterAudience} audience leads</strong>
-                <span>Combined waitlist and subscriber interest waiting for the next drop.</span>
+                <strong>{analytics.waitlistAudience + analytics.newsletterAudience} customer leads</strong>
+                <span>Audience members awaiting store drops and newsletter updates.</span>
               </div>
             </div>
             <div className="dashboard-activity-item">
-              <div className="dashboard-activity-icon"><ArrowUpRight size={16} /></div>
+              <div className="dashboard-activity-icon">
+                <ChatCircleDots size={18} />
+              </div>
               <div>
                 <strong>{analytics.unreadContacts} unresolved message(s)</strong>
-                <span>Customer service follow-ups waiting in the new contact inbox.</span>
+                <span>Customer service inquiries needing follow-up from the inbox.</span>
               </div>
             </div>
           </div>

@@ -2,6 +2,7 @@ import React from 'react';
 import { CaretLeft, CaretRight, Truck, ShoppingCart } from '@phosphor-icons/react';
 import { Link } from 'react-router-dom';
 import { formatCurrency } from '../data/store';
+import { siteConfig } from '../config/siteConfig';
 
 function CartPage({ cartItems, cartTotal, updateCartQuantity, clearCart, user, storeSettings }) {
   const freeShippingThreshold = Number(storeSettings?.free_shipping_threshold || 50000);
@@ -32,7 +33,7 @@ function CartPage({ cartItems, cartTotal, updateCartQuantity, clearCart, user, s
     <div className="page-stack">
       <section className="page-header-panel">
         <p className="label">Cart</p>
-        <h1>Review your selected CHRONYX pieces.</h1>
+        <h1>Review your selected {siteConfig.name} pieces.</h1>
       </section>
       
       <section className="shipping-banner" style={{ padding: '16px 24px', background: 'var(--surface-2)', borderRadius: '18px', border: '1px solid var(--line)' }}>

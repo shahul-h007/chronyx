@@ -3,6 +3,7 @@ import { Link, useLocation, useParams } from 'react-router-dom';
 import SEO from '../components/SEO';
 import { supabase } from '../lib/supabase';
 import { buildUnitQrCodeUrl } from '../lib/productIdentity';
+import { siteConfig } from '../config/siteConfig';
 
 function VerifyProductPage({ products = [] }) {
   const { unitId } = useParams();
@@ -70,7 +71,7 @@ function VerifyProductPage({ products = [] }) {
         <section className="page-header-panel">
           <p className="label">Product Verification</p>
           <h1>Checking authenticity record...</h1>
-          <p className="hero-text">Please wait while we verify this CHRONYX certificate.</p>
+          <p className="hero-text">Please wait while we verify this {siteConfig.name} certificate.</p>
         </section>
       </div>
     );
@@ -80,8 +81,8 @@ function VerifyProductPage({ products = [] }) {
     return (
       <div className="page-stack">
         <SEO
-          title="Verify CHRONYX Product"
-          description="Check whether a CHRONYX authenticity certificate is valid."
+          title={`Verify ${siteConfig.name} Product`}
+          description={`Check whether a ${siteConfig.name} authenticity certificate is valid.`}
           path={`/verify/unit/${unitId || ''}`}
         />
         <section className="page-header-panel">
@@ -89,8 +90,8 @@ function VerifyProductPage({ products = [] }) {
           <h1>Certificate not found.</h1>
           <p className="hero-text">
             {unitError
-              ? 'The authenticity registry is not fully configured yet. Please contact CHRONYX support if you expected this certificate to be active.'
-              : 'The scanned certificate could not be matched with an active CHRONYX authenticity record.'}
+              ? `The authenticity registry is not fully configured yet. Please contact ${siteConfig.name} support if you expected this certificate to be active.`
+              : `The scanned certificate could not be matched with an active ${siteConfig.name} authenticity record.`}
           </p>
         </section>
       </div>
@@ -101,7 +102,7 @@ function VerifyProductPage({ products = [] }) {
     <div className="page-stack">
       <SEO
         title={`Verify ${unit.public_unit_id}`}
-        description={`Verify CHRONYX authenticity certificate ${unit.public_unit_id}.`}
+        description={`Verify ${siteConfig.name} authenticity certificate ${unit.public_unit_id}.`}
         path={`/verify/unit/${unit.public_unit_id}`}
       />
 
@@ -110,17 +111,17 @@ function VerifyProductPage({ products = [] }) {
         <h1>{verified ? 'Authenticity confirmed.' : 'Authenticity check incomplete.'}</h1>
         <p className="hero-text">
           {verified
-            ? 'This certificate matches an active CHRONYX registry entry and can be treated as authentic.'
-            : 'The scanned code does not match the active authenticity record for this unit. Please contact CHRONYX if this certificate came with your order.'}
+            ? `This certificate matches an active ${siteConfig.name} registry entry and can be treated as authentic.`
+            : `The scanned code does not match the active authenticity record for this unit. Please contact ${siteConfig.name} if this certificate came with your order.`}
         </p>
       </section>
 
       <section className="checkout-layout">
         <div className="checkout-form-panel product-auth-verify-panel">
           <div className="section-heading">
-            <h2>{product?.name || 'CHRONYX Registered Unit'}</h2>
+            <h2>{product?.name || `${siteConfig.name} Registered Unit`}</h2>
             <p className="hero-text">
-              {product?.summary || 'A registered CHRONYX certificate tied to an individual physical unit.'}
+              {product?.summary || `A registered ${siteConfig.name} certificate tied to an individual physical unit.`}
             </p>
           </div>
           <div className="product-auth-verify-grid">

@@ -2,21 +2,47 @@ import React, { useEffect, useState } from 'react';
 import { List, ShoppingBagOpen, X } from '@phosphor-icons/react';
 import { Link, useLocation } from 'react-router-dom';
 import { siteConfig } from '../config/siteConfig';
+import { toBoolean, isJournalPath } from '../lib/siteContent';
 
-const baseNavigationLinks = [
-  { label: 'Shop', path: '/shop' },
-  { label: 'About', path: '/about' },
-  { label: 'Contact', path: '/contact' },
+const fallbackNavigationLinks = [
+  { label: 'Shop', path: '/shop', visible: true },
+  { label: 'About', path: '/about', visible: true },
+  { label: 'Contact', path: '/contact', visible: true },
+  { label: 'Journal', path: '/blog', visible: true },
 ];
 
-function SiteHeader({ cartCount, notice, setNotice, storeName = siteConfig.name, user = null, showJournal = false }) {
+function SiteHeader({
+  cartCount,
+  notice,
+  setNotice,
+  storeName = siteConfig.name,
+  user = null,
+  showJournal = false,
+  navContent = null,
+}) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const location = useLocation();
 
+  const isJournalFeatureActive = toBoolean(showJournal, false);
+
+  const rawLinks = Array.isArray(navContent?.links) && navContent.links.length > 0
+    ? navContent.links
+    : fallbackNavigationLinks;
+
+  const hasJournalInRaw = rawLinks.some((link) => isJournalPath(link?.path));
+
+  const filteredLinks = rawLinks.filter((link) => {
+    if (!link || !link.label || !link.path) return false;
+    if (isJournalPath(link.path)) {
+      return isJournalFeatureActive && link.visible !== false;
+    }
+    return link.visible !== false;
+  });
+
   const navigationLinks = [
-    ...baseNavigationLinks,
-    ...(showJournal ? [{ label: 'Journal', path: '/blog' }] : []),
+    ...filteredLinks,
+    ...(isJournalFeatureActive && !hasJournalInRaw ? [{ label: 'Journal', path: '/blog' }] : []),
   ];
 
   useEffect(() => {

@@ -3,6 +3,7 @@ import { ArrowRight, Cube, Gauge, MoonStars } from '@phosphor-icons/react';
 import { Link } from 'react-router-dom';
 import { formatCurrency } from '../data/store';
 import SEO from '../components/SEO';
+import { siteConfig } from '../config/siteConfig';
 import { optimizeImage } from '../lib/optimizeImage';
 
 function HomePage({ products = [], siteContent }) {
@@ -106,7 +107,7 @@ function HomePage({ products = [], siteContent }) {
     <div className="page-stack home-page home-page-v2">
       <SEO
         title="Luxury Wooden Wall Clocks"
-        description="Minimal wall clocks by CHRONYX. Quiet, premium, and designed to elevate modern spaces."
+        description={`Minimal wall clocks by ${siteConfig.name}. Quiet, premium, and designed to elevate modern spaces.`}
       />
 
       <section className="home-v2-hero">
@@ -128,7 +129,7 @@ function HomePage({ products = [], siteContent }) {
         {heroImage ? (
           <div className="home-v2-hero-visual">
             <div className="hero-product-stage" style={{ transform: `scale(${heroScale})` }}>
-              <img src={optimizeImage(heroImage, 1200)} alt={heroProduct?.name || 'Chronyx clock'} loading="eager" fetchpriority="high" width="1200" height="1500" style={{ width: '100%', height: 'auto', aspectRatio: '4/5', objectFit: 'cover' }} />
+              <img src={optimizeImage(heroImage, 1200)} alt={heroProduct?.name || `${siteConfig.name} clock`} loading="eager" fetchpriority="high" width="1200" height="1500" style={{ width: '100%', height: 'auto', aspectRatio: '4/5', objectFit: 'cover' }} />
             </div>
           </div>
         ) : null}
@@ -139,7 +140,7 @@ function HomePage({ products = [], siteContent }) {
           <div className="home-v2-shell home-v2-feature-grid">
             <div className="feature-copy">
               <p className="feature-kicker">Signature Piece</p>
-              <h2>The Chronyx Core</h2>
+              <h2>The {siteConfig.name} Core</h2>
               <p>
                 A statement piece engineered for modern spaces.
               </p>
@@ -310,7 +311,7 @@ function HomePage({ products = [], siteContent }) {
       <section className="home-v2-final-cta">
         <div className="final-cta-copy">
           <h2>Make Time Beautiful.</h2>
-          <p>Bring Chronyx into your space.</p>
+          <p>Bring {siteConfig.name} into your space.</p>
           <Link className="btn-primary btn-primary-light" to="/shop">
             Shop Now
           </Link>
