@@ -25,7 +25,7 @@ jobs:
         run: npm ci
 
       - name: Install Admin Panel Dependencies
-        run: npm --prefix admin-panel ci
+        run: npm --prefix admin-panel ci --legacy-peer-deps
 
       - name: Setup Mock Environment for Preflight
         run: |
